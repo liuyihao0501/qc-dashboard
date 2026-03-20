@@ -1,0 +1,1209 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>📊 质检团队经营分析看板</title>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg-deep:#080e1f;
+  --bg-card:rgba(255,255,255,.04);
+  --border:rgba(255,255,255,.08);
+  --blue1:#29b6f6;--blue2:#1565c0;--blue3:#0d47a1;
+  --green:#4caf50;--orange:#ff9800;--red:#f44336;
+  --text-main:#e8f0fe;--text-sub:#90caf9;--text-dim:#546e7a;
+}
+body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg-deep);color:var(--text-main);min-height:100vh;overflow-x:hidden}
+
+/* ── 顶部 ── */
+.topbar{background:linear-gradient(90deg,#080e1f 0%,#0d1a3a 50%,#080e1f 100%);border-bottom:1px solid rgba(41,182,246,.2);padding:0 28px;display:flex;align-items:center;justify-content:space-between;height:64px;position:sticky;top:0;z-index:100;backdrop-filter:blur(20px)}
+.logo{display:flex;align-items:center;gap:10px}
+.logo-icon{width:36px;height:36px;background:linear-gradient(135deg,#1565c0,#29b6f6);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px}
+.logo-text{font-size:16px;font-weight:700;background:linear-gradient(90deg,#81d4fa,#e3f2fd);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.top-nav{display:flex;gap:8px}
+.top-nav a{padding:7px 18px;border-radius:20px;text-decoration:none;font-size:13px;transition:all .2s;color:var(--text-sub)}
+.top-nav a.active{background:linear-gradient(90deg,#1565c0,#1976d2);color:#fff;box-shadow:0 2px 12px rgba(21,101,192,.4)}
+.top-nav a:not(.active):hover{background:rgba(255,255,255,.06)}
+.top-meta{display:flex;align-items:center;gap:12px;font-size:12px;color:var(--text-dim)}
+#monthTag{background:rgba(41,182,246,.15);color:var(--blue1);border:1px solid rgba(41,182,246,.3);padding:3px 12px;border-radius:12px}
+#monthSelect{background:rgba(41,182,246,.15);color:var(--blue1);border:1px solid rgba(41,182,246,.3);padding:3px 12px;border-radius:12px;font-size:12px;cursor:pointer;outline:none;appearance:none;-webkit-appearance:none;padding-right:24px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2329b6f6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center}
+#monthSelect option{background:#161b22;color:#c9d1d9}
+#timeTag{color:var(--text-dim)}
+
+/* ── 布局 ── */
+.main{padding:20px 24px;max-width:1600px;margin:0 auto}
+.section-title{font-size:14px;font-weight:700;color:var(--blue1);margin:24px 0 14px;display:flex;align-items:center;gap:8px;letter-spacing:1px}
+.section-title::before{content:"";width:3px;height:16px;background:linear-gradient(180deg,var(--blue1),var(--blue2));border-radius:2px}
+/* ── 总览表格 ── */
+.overview-table-wrap{overflow-x:auto;margin-bottom:20px;border-radius:12px;border:1px solid var(--border)}
+.overview-table{width:100%;border-collapse:collapse;font-size:12px;min-width:960px}
+.overview-table thead tr{background:linear-gradient(135deg,rgba(21,101,192,.45),rgba(13,71,161,.35));border-bottom:2px solid var(--blue1)}
+.overview-table thead th{padding:10px 12px;color:var(--blue1);font-weight:600;text-align:center;white-space:nowrap;letter-spacing:.3px}
+.overview-table tbody tr{border-bottom:1px solid rgba(255,255,255,.04);transition:background .15s}
+.overview-table tbody tr:hover{background:rgba(41,182,246,.07)}
+.overview-table tbody tr.ov-alt{background:rgba(255,255,255,.02)}
+.overview-table tbody tr.ov-total{background:rgba(21,101,192,.2);border-top:2px solid rgba(41,182,246,.4);font-weight:700}
+.overview-table td{padding:9px 12px;text-align:center;color:var(--text-sub)}
+.overview-table .ov-name{text-align:left;color:var(--text-main);font-weight:600;min-width:110px}
+.overview-table .ov-num{color:var(--blue1);font-size:14px;font-weight:700}
+.overview-table .ov-muted{color:var(--text-dim)}
+.overview-table .risk-high{color:#ef5350;font-weight:600}
+.overview-table .risk-mid{color:#ffa726;font-weight:600}
+.overview-table .risk-low{color:#66bb6a;font-weight:600}
+
+/* ── KPI 卡片 ── */
+.kpi-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:4px}
+.kpi-card{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:16px 14px;position:relative;overflow:hidden;transition:transform .2s}
+.kpi-card:hover{transform:translateY(-2px)}
+.kpi-card::after{content:"";position:absolute;bottom:0;left:0;right:0;height:2px;background:var(--accent,var(--blue1))}
+.kpi-label{font-size:11px;color:var(--text-dim);margin-bottom:6px}
+.kpi-val{font-size:26px;font-weight:700;color:var(--text-main);line-height:1}
+.kpi-delta{font-size:11px;margin-top:6px}
+.kpi-delta.up{color:#4caf50}
+.kpi-delta.down{color:#f44336}
+.kpi-delta.flat{color:var(--text-dim)}
+.kpi-icon{position:absolute;top:12px;right:12px;font-size:22px;opacity:.3}
+
+/* ── 图表卡片 ── */
+.chart-row{display:grid;gap:14px;margin-bottom:14px}
+.chart-row.cols2{grid-template-columns:1fr 1fr}
+.chart-row.cols3{grid-template-columns:1fr 1fr 1fr}
+.chart-row.cols21{grid-template-columns:2fr 1fr}
+.chart-row.cols12{grid-template-columns:1fr 2fr}
+.chart-card{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:18px 16px;position:relative}
+.chart-title{font-size:13px;font-weight:600;color:var(--text-sub);margin-bottom:12px;display:flex;align-items:center;gap:6px}
+.chart-title .badge{font-size:10px;background:rgba(41,182,246,.15);color:var(--blue1);border:1px solid rgba(41,182,246,.3);padding:2px 8px;border-radius:10px}
+.chart-box{width:100%}
+/* 风险标签 */
+.risk-tag{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:8px;font-size:11px;font-weight:600}
+.risk-high{background:rgba(244,67,54,.12);color:#ef5350;border:1px solid rgba(244,67,54,.3)}
+.risk-med{background:rgba(255,152,0,.12);color:#ffa726;border:1px solid rgba(255,152,0,.3)}
+.risk-ok{background:rgba(76,175,80,.12);color:#66bb6a;border:1px solid rgba(76,175,80,.3)}
+/* 结论/建议块 */
+.insight-list{list-style:none;padding:0}
+.insight-list li{padding:8px 12px;border-radius:8px;margin-bottom:6px;font-size:12px;line-height:1.7;border-left:3px solid transparent}
+.insight-list li.warn{background:rgba(244,67,54,.06);border-color:#ef5350;color:#ef9a9a}
+.insight-list li.ok{background:rgba(76,175,80,.06);border-color:#66bb6a;color:#a5d6a7}
+.insight-list li.info{background:rgba(41,182,246,.06);border-color:var(--blue1);color:#81d4fa}
+.insight-list li.sug{background:rgba(255,193,7,.06);border-color:#ffc107;color:#ffe082}
+/* 行业对比表 */
+.bench-table{width:100%;border-collapse:collapse;font-size:12px}
+.bench-table th{background:rgba(21,101,192,.3);color:#90caf9;padding:8px 12px;text-align:left;font-weight:600}
+.bench-table td{padding:8px 12px;border-bottom:1px solid rgba(255,255,255,.05);line-height:1.6}
+.bench-table tr:hover td{background:rgba(255,255,255,.03)}
+/* 综合评分 */
+.score-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
+.score-item{text-align:center;padding:14px 8px}
+.score-circle{width:60px;height:60px;border-radius:50%;margin:0 auto 8px;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;border:3px solid}
+.score-label{font-size:11px;color:var(--text-sub)}
+/* 加载 */
+.loading{text-align:center;padding:80px;color:var(--text-sub)}
+.loading-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--blue1);margin:0 3px;animation:blink 1s infinite}
+.loading-dot:nth-child(2){animation-delay:.2s}
+.loading-dot:nth-child(3){animation-delay:.4s}
+@keyframes blink{0%,100%{opacity:.2}50%{opacity:1}}
+/* 项目动态 */
+.proj-flow{display:flex;flex-direction:column;gap:10px}
+.proj-item{background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:10px;padding:12px 14px;display:grid;grid-template-columns:1fr auto auto auto auto;gap:12px;align-items:center;transition:all .3s}
+.proj-item:hover{background:rgba(41,182,246,.06);border-color:rgba(41,182,246,.2);transform:translateX(4px)}
+.proj-name{font-size:13px;font-weight:600;color:var(--text-main)}
+.proj-sub{font-size:11px;color:var(--text-dim);margin-top:2px}
+.proj-vol{font-size:12px;color:#ffd54f}
+.proj-acc{font-size:12px;font-weight:600}
+.proj-status{font-size:11px;padding:3px 10px;border-radius:10px}
+.status-ok{background:rgba(76,175,80,.15);color:#81c784}
+.status-fail{background:rgba(244,67,54,.15);color:#ef9a9a}
+.status-pending{background:rgba(255,193,7,.15);color:#ffe082}
+/* 无数据 */
+.no-data{text-align:center;padding:40px;color:var(--text-dim);font-size:13px}
+.no-data a{color:var(--blue1);text-decoration:underline}
+/* 滚动进度 */
+.progress-bar{position:fixed;top:0;left:0;height:2px;background:linear-gradient(90deg,var(--blue2),var(--blue1));width:0%;z-index:200;transition:width .1s}
+
+/* ── 背景粒子画布 ── */
+#particles-canvas{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:0;opacity:.35}
+.main,.topbar{position:relative;z-index:1}
+
+/* ── KPI 数字滚动 ── */
+.kpi-val{transition:none}
+.kpi-rolling{display:inline-block}
+
+/* ── KPI 卡片入场 + 呼吸光晕 ── */
+@keyframes cardIn{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:translateY(0)}}
+@keyframes cardGlow{0%,100%{box-shadow:0 0 0 0 transparent}50%{box-shadow:0 0 18px 2px rgba(41,182,246,.15)}}
+.kpi-card{animation:cardIn .5s ease both, cardGlow 4s ease-in-out infinite}
+.kpi-card:nth-child(1){animation-delay:.05s,0s}
+.kpi-card:nth-child(2){animation-delay:.12s,1s}
+.kpi-card:nth-child(3){animation-delay:.19s,2s}
+.kpi-card:nth-child(4){animation-delay:.26s,3s}
+.kpi-card:nth-child(5){animation-delay:.33s,4s}
+.kpi-card:nth-child(6){animation-delay:.40s,5s}
+
+/* ── 图表卡片入场 ── */
+@keyframes chartIn{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
+.chart-card{animation:chartIn .6s ease both}
+
+/* ── Section 标题扫光 ── */
+@keyframes shimmer{0%{background-position:-200% center}100%{background-position:200% center}}
+.section-title{background:linear-gradient(90deg,var(--blue1) 40%,#fff 50%,var(--blue1) 60%);background-size:200% auto;-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:shimmer 4s linear infinite}
+.section-title::before{background:linear-gradient(180deg,var(--blue1),var(--blue2));-webkit-background-clip:unset;-webkit-text-fill-color:unset;background-clip:unset;content:"";width:3px;height:16px;display:inline-block;border-radius:2px;flex-shrink:0}
+
+/* ── Logo 呼吸光晕 ── */
+@keyframes logoPulse{0%,100%{box-shadow:0 0 0 0 rgba(41,182,246,.5)}70%{box-shadow:0 0 0 8px rgba(41,182,246,0)}}
+.logo-icon{animation:logoPulse 2.5s ease-in-out infinite}
+
+/* ── 表格行淡入 ── */
+@keyframes rowIn{from{opacity:0;transform:translateX(-12px)}to{opacity:1;transform:none}}
+.overview-table tbody tr{animation:rowIn .4s ease both}
+
+/* ── 顶部右侧标签跳动 ── */
+@keyframes tagPop{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
+#monthSelect{animation:tagPop 3s ease-in-out infinite}
+
+/* ── 风险标签闪烁 ── */
+@keyframes riskBlink{0%,100%{opacity:1}50%{opacity:.65}}
+.risk-tag.risk-high{animation:riskBlink 1.6s ease-in-out infinite}
+
+/* ── insight 条目滑入 ── */
+@keyframes insightIn{from{opacity:0;transform:translateX(-10px)}to{opacity:1;transform:none}}
+.insight-list li{animation:insightIn .45s ease both}
+</style>
+
+<script>
+/* ===== 静态版内嵌数据 · 生成时间：2026-03-20 14:46:34 ===== */
+(function() {
+  var __data__ = {"month": "--help", "prev_month": null, "total": 0, "on_cnt": 0, "resign": 0, "new_join": 0, "resign_rate": 0.0, "join_rate": 0.0, "grp_dist": {}, "mom_grp": {}, "mgr_cnt": 0, "span": 0.0, "mgr_ratio": 0.0, "mom_total": 0, "mom_on": 0, "zy_dist": {}, "city_dist": {}, "grade_dist": {}, "ai_dist": {}, "talent_dist": {}, "hipot_cnt": 0, "hipot_ratio": 0.0, "ai_a_ratio": 0.0, "avg_acc": 0, "reach_dist": {}, "reach_rate": 0.0, "total_qc": 0, "total_line": 0, "diff_dist": {}, "ioa_cnt": 0, "proj_list": [], "avg_per_vol": 0, "mom_acc": 0, "mom_qc": 0, "avg_cost": 0, "total_cost": 0, "avg_ot": 0, "perf_dist": {}, "grade_cost": {}, "city_cost": {}, "hi_hi": 0, "hi_lo": 0, "lo_hi": 0, "mom_cost": 0, "mom_ot": 0, "scores": {"结构合理性": 5, "成本健康度": 5, "人才梯队": 1, "项目匹配度": 1, "风险水平": 5}, "total_score": 3.4, "industry": {"字节系": {"人均质检体量": 8500, "高潜比例": 35, "AI_A档": 42, "管理跨度": 18, "达标率": 98.5, "人均成本": 32000}, "百度系": {"人均质检体量": 7200, "高潜比例": 28, "AI_A档": 38, "管理跨度": 15, "达标率": 97.8, "人均成本": 34000}, "阿里系": {"人均质检体量": 9100, "高潜比例": 40, "AI_A档": 45, "管理跨度": 20, "达标率": 98.9, "人均成本": 38000}, "行业均值": {"人均质检体量": 7500, "高潜比例": 30, "AI_A档": 38, "管理跨度": 16, "达标率": 98.0, "人均成本": 34500}}};
+  var _origFetch = window.fetch;
+  window.fetch = function(url, opts) {
+    if (typeof url === 'string' && url.indexOf('/api/analysis') !== -1) {
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        json: function() { return Promise.resolve(__data__); }
+      });
+    }
+    if (typeof _origFetch === 'function') return _origFetch.apply(this, arguments);
+    return Promise.reject(new Error('fetch not available'));
+  };
+})();
+</script>
+</head>
+<body>
+<canvas id="particles-canvas"></canvas>
+<div class="progress-bar" id="progressBar"></div>
+<div class="topbar">
+  <div class="logo">
+    <div class="logo-icon">🔍</div>
+    <div class="logo-text">质检团队经营分析看板</div>
+  </div>
+  <div class="top-nav">
+    
+    <a href="/dashboard" class="active">📊 经营看板</a>
+  </div>
+  <div class="top-meta">
+    <span style="color:rgba(41,182,246,.55);font-size:11px;letter-spacing:.5px;margin-right:6px;border:1px solid rgba(41,182,246,.2);padding:2px 8px;border-radius:10px;user-select:none">v1.0</span>
+    <select id="monthSelect" title="切换月份"><option>加载中…</option></select>
+    <span id="timeTag">—</span>
+  </div>
+</div>
+
+<div class="main" id="mainContent">
+  <div class="loading">
+    <div><span class="loading-dot"></span><span class="loading-dot"></span><span class="loading-dot"></span></div>
+    <p style="margin-top:16px;font-size:14px">正在加载分析数据…</p>
+  </div>
+</div>
+
+<script>
+// ══ 工具 ══════════════════════════════════════════════════
+const PALETTE = ['#29b6f6','#1e88e5','#5c6bc0','#42a5f5','#26c6da','#ab47bc','#ef5350','#ffa726','#66bb6a','#d4e157','#26a69a'];
+const LIGHT = 'rgba(255,255,255,.06)';
+
+function ec(id, opt){
+  const el = document.getElementById(id);
+  if(!el) return;
+  const chart = echarts.init(el, null, {renderer:'canvas'});
+  chart.setOption(opt);
+  window.addEventListener('resize', ()=>chart.resize());
+  return chart;
+}
+
+function kpiClass(delta){
+  if(!delta||delta==='N/A') return 'flat';
+  return delta.includes('▲') ? 'up' : 'down';
+}
+
+function insightClass(text){
+  if(text.includes('⚠️')||text.includes('风险')) return 'warn';
+  if(text.includes('✅')) return 'ok';
+  if(text.includes('【建议')) return 'sug';
+  return 'info';
+}
+
+function scoreColor(s){
+  if(s>=4.5) return {bg:'rgba(76,175,80,.2)',border:'#4caf50',text:'#81c784'};
+  if(s>=3.5) return {bg:'rgba(41,182,246,.2)',border:'#29b6f6',text:'#81d4fa'};
+  if(s>=2.5) return {bg:'rgba(255,152,0,.2)',border:'#ff9800',text:'#ffb74d'};
+  return {bg:'rgba(244,67,54,.2)',border:'#f44336',text:'#ef9a9a'};
+}
+
+// ══ 安全数值工具 ══════════════════════════════════════════
+/** 将任意值转为 number，null/undefined/NaN 返回 fallback */
+function n(v, fallback=0){ const r=parseFloat(v); return isNaN(r)?fallback:r; }
+/** 安全 toFixed：n(v).toFixed(d) → 替代裸 v.toFixed(d) */
+function nf(v, d=1, fallback='—'){ const r=parseFloat(v); return isNaN(r)?fallback:r.toFixed(d); }
+
+// ══ 渲染 ══════════════════════════════════════════════════
+function render(data){
+  const m1=data.module1, m2=data.module2, m3=data.module3, m4=data.module4, m5=data.module5;
+  document.getElementById('timeTag').textContent = '生成于 '+data.generated_at;
+
+  // ── 月份选择器 ─────────────────────────────────────────
+  const sel = document.getElementById('monthSelect');
+  const flowMonths = (data.module1.monthly_flow || []).map(r => r.month);
+  // 当前月如果不在 flow 里也要加进去
+  if (!flowMonths.includes(data.month)) flowMonths.push(data.month);
+  sel.innerHTML = flowMonths.map(m =>
+    `<option value="${m}"${m === data.month ? ' selected' : ''}>${m} 数据</option>`
+  ).join('');
+  sel.onchange = function() {
+    const chosen = this.value;
+    if (chosen !== data.month) {
+      // 静态版只有当前月数据，给出友好提示
+      alert('📅 当前静态版仅内嵌了 ' + data.month + ' 的数据。\n如需查看 ' + chosen + '，请重新生成对应月份的看板。');
+      this.value = data.month; // 还原
+    }
+  };
+
+  let html = '';
+
+  // ── 总览：各组在职人数分布 ──────────────────────────────
+  const ovRows = (m1.overview_table||[]);
+  if(ovRows.length > 0){
+    html += `<div class="section-title" style="margin-top:0">📋 各组在职人数分布</div>`;
+    html += `<div class="overview-table-wrap"><table class="overview-table"><thead><tr>
+      <th>组别</th><th>在职人数</th><th>占比</th><th>自营</th>
+      <th>自营运营族</th><th>自营交付族</th><th>联营</th><th>本组自营占比</th>
+      <th>管理人数</th><th>在招需求</th><th>本月入职</th><th>本月离职</th>
+      <th>管理比例</th><th>人才流失风险</th>
+    </tr></thead><tbody>`;
+    ovRows.forEach((r,i)=>{
+      const isTotal = r['组别']==='合计';
+      const trCls = isTotal?'ov-total':(i%2===1?'ov-alt':'');
+      const risk = r['人才流失风险']||'—';
+      const rCls = risk.includes('🔴')?'risk-high':risk.includes('🟡')?'risk-mid':'risk-low';
+      html += `<tr class="${trCls}">
+        <td class="ov-name">${r['组别']}</td>
+        <td class="ov-num">${r['在职人数']}</td>
+        <td>${r['占比']}</td>
+        <td>${r['自营']}</td>
+        <td>${r['自营运营族']}</td>
+        <td>${r['自营交付族']}</td>
+        <td>${r['联营']}</td>
+        <td>${r['自营占比']}</td>
+        <td>${r['管理人数']}</td>
+        <td class="ov-muted">${r['在招需求']}</td>
+        <td>${r['本月入职']}</td>
+        <td>${r['本月离职']}</td>
+        <td>${r['管理比例']}</td>
+        <td class="${isTotal?'':'risk-cell '+rCls}">${isTotal?'—':risk}</td>
+      </tr>`;
+    });
+    html += `</tbody></table></div>`;
+  }
+
+  // ── 模块一 ──────────────────────────────────────────────
+  html += `<div class="section-title">🟦 模块一：人力编制与组织健康度</div>`;
+
+  // KPI行
+  const grp = m1.group_dist||{};
+  const grpNames = Object.keys(grp);
+  const totalGrp = grpNames.reduce((s,k)=>s+grp[k],0);
+  html += `<div class="kpi-grid">
+    <div class="kpi-card" style="--accent:#29b6f6">
+      <div class="kpi-icon">👥</div>
+      <div class="kpi-label">在职总人数</div>
+      <div class="kpi-val">${m1.in_service}</div>
+      <div class="kpi-delta ${kpiClass(m1.delta_total_pct)}">${m1.delta_total_pct||'—'} 环比</div>
+    </div>
+    <div class="kpi-card" style="--accent:#4caf50">
+      <div class="kpi-icon">📥</div>
+      <div class="kpi-label">本月入职</div>
+      <div class="kpi-val">${m1.join}</div>
+      <div class="kpi-delta flat">入职率 ${nf(m1.join_rate!=null?m1.join_rate*100:null,1)}%</div>
+    </div>
+    <div class="kpi-card" style="--accent:#f44336">
+      <div class="kpi-icon">📤</div>
+      <div class="kpi-label">本月离职</div>
+      <div class="kpi-val">${m1.leave}</div>
+      <div class="kpi-delta ${n(m1.leave_rate)>0.03?'down':'flat'}">离职率 ${nf(m1.leave_rate!=null?n(m1.leave_rate)*100:null,1)}%</div>
+    </div>
+    <div class="kpi-card" style="--accent:#ffa726">
+      <div class="kpi-icon">🏢</div>
+      <div class="kpi-label">管理岗人数</div>
+      <div class="kpi-val">${m1.manager_count}</div>
+      <div class="kpi-delta flat">管理比例 ${nf(m1.mgmt_ratio!=null?n(m1.mgmt_ratio)*100:null,1)}%</div>
+    </div>
+    <div class="kpi-card" style="--accent:#ab47bc">
+      <div class="kpi-icon">📐</div>
+      <div class="kpi-label">管理跨度</div>
+      <div class="kpi-val">${nf(m1.mgmt_span,0)}:1</div>
+      <div class="kpi-delta ${n(m1.mgmt_span)>20?'down':n(m1.mgmt_span)>15?'warn':'ok'}">${n(m1.mgmt_span)>20?'⚠️超载':n(m1.mgmt_span)>15?'偏高':'✅健康'}</div>
+    </div>
+    <div class="kpi-card" style="--accent:#26c6da">
+      <div class="kpi-icon">🔗</div>
+      <div class="kpi-label">联营占比</div>
+      <div class="kpi-val">${n(m1.in_service)>0?nf(n(m1.lianying)/n(m1.in_service)*100,0):0}%</div>
+      <div class="kpi-delta flat">联营 ${m1.lianying} / 自营 ${m1.ziying}</div>
+    </div>
+  </div>`;
+
+  // 图表行1
+  html += `<div class="chart-row cols21">
+    <div class="chart-card">
+      <div class="chart-title">各组人数分布 <span class="badge">质量管理3组与3组-甲方分开统计</span></div>
+      <div id="ch_grp" class="chart-box" style="height:240px"></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">自营 vs 联营</div>
+      <div id="ch_zy" class="chart-box" style="height:240px"></div>
+    </div>
+  </div>`;
+
+  // 图表行2
+  html += `<div class="chart-row cols3">
+    <div class="chart-card">
+      <div class="chart-title">工作地分布</div>
+      <div id="ch_city" class="chart-box" style="height:220px"></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">组织健康指标</div>
+      <div id="ch_health" class="chart-box" style="height:220px"></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">人员流动分析</div>
+      <div id="ch_flow" class="chart-box" style="height:220px"></div>
+    </div>
+  </div>`;
+
+  // ── 各组自营/联营月度明细 ──────────────────────────────
+  const grpZy = m1.group_zy_detail || {};
+  const prevGrpZy = m1.prev_group_zy_detail || {};
+  const grpZyNames = Object.keys(grpZy);
+  html += `<div class="chart-row cols2">
+    <div class="chart-card">
+      <div class="chart-title">📊 各组自营 / 联营人数分布 <span class="badge">含本月详细拆分</span></div>
+      <div id="ch_grp_zy" class="chart-box" style="height:260px"></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">📈 各组本月 vs 上月人数环比</div>
+      <div id="ch_grp_delta" class="chart-box" style="height:260px"></div>
+    </div>
+  </div>`;
+
+  // ── 离职人员明细表 ────────────────────────────────────
+  const leaveList = m1.leave_detail || [];
+  const keyLeaveNames = m1.key_leave_names || [];
+  html += `<div class="chart-card" style="margin-bottom:14px">
+    <div class="chart-title">🚪 本月离职人员明细
+      ${keyLeaveNames.length>0 ? `<span class="risk-tag risk-high" style="margin-left:8px">⚠️ ${keyLeaveNames.length}名骨干离职：${keyLeaveNames.join('、')}</span>` : '<span class="risk-tag risk-ok">✅ 本月无骨干离职</span>'}
+    </div>
+    ${leaveList.length === 0 ? '<div class="no-data" style="padding:20px">✅ 本月无离职记录</div>' : `
+    <table style="width:100%;border-collapse:collapse;font-size:12px">
+      <thead>
+        <tr>
+          ${['姓名','所在组','职级','角色','类型','工作地','职位','离职时间','风险标记'].map(h=>`<th style="background:rgba(21,101,192,.3);color:#90caf9;padding:8px 10px;text-align:left;font-weight:600;white-space:nowrap">${h}</th>`).join('')}
+        </tr>
+      </thead>
+      <tbody>
+        ${leaveList.map(p=>`
+        <tr style="border-bottom:1px solid rgba(255,255,255,.05);transition:background .15s" onmouseover="this.style.background='rgba(255,255,255,.03)'" onmouseout="this.style.background=''">
+          <td style="padding:8px 10px;color:#e8f0fe;font-weight:600">${p.姓名}</td>
+          <td style="padding:8px 10px;color:#90caf9">${p.组}</td>
+          <td style="padding:8px 10px;color:#ffd54f">${p.职级}</td>
+          <td style="padding:8px 10px;color:#81d4fa">${p.角色}</td>
+          <td style="padding:8px 10px"><span style="padding:2px 8px;border-radius:8px;font-size:11px;background:${p.类型==='自营'?'rgba(76,175,80,.15)':'rgba(255,152,0,.15)'};color:${p.类型==='自营'?'#81c784':'#ffb74d'}">${p.类型}</span></td>
+          <td style="padding:8px 10px;color:#90caf9">${p.工作地}</td>
+          <td style="padding:8px 10px;color:#b0bec5">${p.职位}</td>
+          <td style="padding:8px 10px;color:#b0bec5">${p.离职时间}</td>
+          <td style="padding:8px 10px"><span class="risk-tag ${p.是否骨干.includes('骨干')?'risk-high':'risk-ok'}">${p.是否骨干}</span></td>
+        </tr>`).join('')}
+      </tbody>
+    </table>`}
+  </div>`;
+
+  // 结论建议
+  html += `<div class="chart-row cols2">
+    <div class="chart-card">
+      <div class="chart-title">📋 分析结论</div>
+      <ul class="insight-list">
+        ${(m1.conclusions||[]).map(c=>`<li class="${insightClass(c)}">${c}</li>`).join('')}
+      </ul>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">💡 优化建议</div>
+      <ul class="insight-list">
+        ${(m1.suggestions||[]).map(s=>`<li class="${insightClass(s)}">${s}</li>`).join('')}
+      </ul>
+    </div>
+  </div>`;
+
+  // ── 模块二 ──────────────────────────────────────────────
+  html += `<div class="section-title">🟦 模块二：人才结构分析</div>`;
+  const lvl = m2.level_dist||{};
+  const aiDist = m2.ai_dist||{};
+  const talentDist = m2.talent_dist||{};
+  const totalStaff = Object.values(lvl).reduce((s,v)=>s+v,0)||1;
+
+  html += `<div class="chart-row cols2">
+    <div class="chart-card">
+      <div class="chart-title">职级金字塔</div>
+      <div id="ch_lvl" class="chart-box" style="height:250px"></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">AI能力档位分布 ${m2.ai_empty>0?`<span class="risk-tag risk-high">⚠️ ${m2.ai_empty}人未填写</span>`:'<span class="risk-tag risk-ok">✅ 数据完整</span>'}</div>
+      <div id="ch_ai" class="chart-box" style="height:250px"></div>
+    </div>
+  </div>`;
+
+  html += `<div class="chart-row cols1">
+    <div class="chart-card">
+      <div class="chart-title">城市结构分布</div>
+      <div id="ch_city2" class="chart-box" style="height:260px"></div>
+    </div>
+  </div>`;
+
+  html += `<div class="chart-row cols2">
+    <div class="chart-card">
+      <div class="chart-title">📋 结构分析结论</div>
+      <ul class="insight-list">
+        ${(m2.conclusions||[]).map(c=>`<li class="${insightClass(c)}">${c}</li>`).join('')}
+      </ul>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">💡 结构优化建议（3-5条）</div>
+      <ul class="insight-list">
+        ${(m2.suggestions||[]).map(s=>`<li class="${insightClass(s)}">${s}</li>`).join('')}
+      </ul>
+    </div>
+  </div>`;
+
+  // ── 模块三 ──────────────────────────────────────────────
+  html += `<div class="section-title">🟦 模块三：项目经营维度</div>`;
+  const projs = m3.projects||[];
+
+  if(m3.no_data){
+    html += `<div class="chart-card"><div class="no-data">📭 项目经营数据暂未上传<br><span style="color:#546e7a">（静态版暂无上传入口）</span></div></div>`;
+  } else {
+    html += `<div class="kpi-grid" style="grid-template-columns:repeat(6,1fr)">
+      <div class="kpi-card" style="--accent:#ffa726">
+        <div class="kpi-icon">📁</div>
+        <div class="kpi-label">项目总数</div>
+        <div class="kpi-val">${m3.total_projects}</div>
+      </div>
+      <div class="kpi-card" style="--accent:#4caf50">
+        <div class="kpi-icon">✅</div>
+        <div class="kpi-label">项目达标数</div>
+        <div class="kpi-val">${m3.reach_count}</div>
+        <div class="kpi-delta flat">达标率 ${nf(m3.reach_rate!=null?n(m3.reach_rate)*100:null,1)}%</div>
+      </div>
+      <div class="kpi-card" style="--accent:#ab47bc">
+        <div class="kpi-icon">🔬</div>
+        <div class="kpi-label">总质检人天</div>
+        <div class="kpi-val" style="font-size:20px">${m3.total_qc_manday>0?m3.total_qc_manday.toLocaleString():'—'}</div>
+      </div>
+      <div class="kpi-card" style="--accent:#26c6da">
+        <div class="kpi-icon">🚀</div>
+        <div class="kpi-label">总交付人天</div>
+        <div class="kpi-val" style="font-size:20px">${m3.total_deliver_manday>0?Math.round(m3.total_deliver_manday).toLocaleString():'—'}</div>
+      </div>
+      <div class="kpi-card" style="--accent:#ffd54f">
+        <div class="kpi-icon">⚖️</div>
+        <div class="kpi-label">整体质检:交付</div>
+        <div class="kpi-val" style="font-size:18px">${m3.overall_qc_deliver_ratio||'N/A'}</div>
+        <div class="kpi-delta flat">人天口径</div>
+      </div>
+      <div class="kpi-card" style="--accent:#ef5350">
+        <div class="kpi-icon">🔥</div>
+        <div class="kpi-label">高难/过配</div>
+        <div class="kpi-val">${m3.high_diff_count}</div>
+        <div class="kpi-delta flat">过配 ${(m3.overfit_projects||[]).length} · 不足 ${(m3.underfit_projects||[]).length}</div>
+      </div>
+    </div>`;
+
+    // 项目动态列表（带动画）
+    html += `<div class="chart-card" style="margin-bottom:14px">
+      <div class="chart-title">📊 项目全景动态看板 <span class="badge">实时更新</span></div>
+      <div class="proj-flow" id="projFlow"></div>
+    </div>`;
+
+    // 项目图表
+    html += `<div class="chart-row cols2">
+      <div class="chart-card">
+        <div class="chart-title">各项目体量分布（横向对比）</div>
+        <div id="ch_proj_vol" class="chart-box" style="height:280px"></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">项目达标率 vs 准确率</div>
+        <div id="ch_proj_acc" class="chart-box" style="height:280px"></div>
+      </div>
+    </div>`;
+  }
+
+  html += `<div class="chart-row cols2">
+    <div class="chart-card">
+      <div class="chart-title">📋 经营风险提示</div>
+      <ul class="insight-list">
+        ${(m3.conclusions||[]).map(c=>`<li class="${insightClass(c)}">${c}</li>`).join('')}
+      </ul>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">💡 项目优化建议</div>
+      <ul class="insight-list">
+        ${(m3.suggestions||[]).map(s=>`<li class="${insightClass(s)}">${s}</li>`).join('')}
+      </ul>
+    </div>
+  </div>`;
+
+  // ── 模块四 ──────────────────────────────────────────────
+  html += `<div class="section-title">🟦 模块四：人力成本与效能</div>`;
+  if(m4.no_data){
+    html += `<div class="chart-card"><div class="no-data">📭 薪酬成本数据暂未上传<br><span style="color:#546e7a">（静态版暂无上传入口）</span></div></div>`;
+  } else {
+    html += `<div class="kpi-grid">
+      <div class="kpi-card" style="--accent:#4caf50">
+        <div class="kpi-icon">💰</div>
+        <div class="kpi-label">人均月成本</div>
+        <div class="kpi-val" style="font-size:20px">${m4.avg_cost?m4.avg_cost.toLocaleString()+'元':'—'}</div>
+      </div>
+      <div class="kpi-card" style="--accent:#29b6f6">
+        <div class="kpi-icon">📊</div>
+        <div class="kpi-label">人均基本工资</div>
+        <div class="kpi-val" style="font-size:20px">${m4.avg_基本工资?m4.avg_基本工资.toLocaleString()+'元':'—'}</div>
+      </div>
+      <div class="kpi-card" style="--accent:#ffa726">
+        <div class="kpi-icon">⏰</div>
+        <div class="kpi-label">人均加班时长</div>
+        <div class="kpi-val">${m4.avg_加班时长?nf(m4.avg_加班时长,1)+'h':'—'}</div>
+      </div>
+      <div class="kpi-card" style="--accent:#ab47bc">
+        <div class="kpi-icon">🎯</div>
+        <div class="kpi-label">高绩效占比</div>
+        <div class="kpi-val">${m4.high_perf_rate?nf(n(m4.high_perf_rate)*100,1)+'%':'—'}</div>
+      </div>
+      <div class="kpi-card" style="--accent:#ef5350">
+        <div class="kpi-icon">💼</div>
+        <div class="kpi-label">本月招聘成本</div>
+        <div class="kpi-val" style="font-size:20px">${m4.total_招聘成本?m4.total_招聘成本.toLocaleString()+'元':'—'}</div>
+      </div>
+      <div class="kpi-card" style="--accent:#26c6da">
+        <div class="kpi-icon">📋</div>
+        <div class="kpi-label">统计人数</div>
+        <div class="kpi-val">${m4.total_staff||0}</div>
+      </div>
+    </div>`;
+
+    html += `<div class="chart-row cols2">
+      <div class="chart-card">
+        <div class="chart-title">绩效分布</div>
+        <div id="ch_perf" class="chart-box" style="height:220px"></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">职级人均成本</div>
+        <div id="ch_lvl_cost" class="chart-box" style="height:220px"></div>
+      </div>
+    </div>`;
+  }
+
+  html += `<div class="chart-row cols2">
+    <div class="chart-card">
+      <div class="chart-title">📋 成本分析结论</div>
+      <ul class="insight-list">
+        ${(m4.conclusions||[]).map(c=>`<li class="${insightClass(c)}">${c}</li>`).join('')}
+      </ul>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">💡 成本优化建议</div>
+      <ul class="insight-list">
+        ${(m4.suggestions||[]).map(s=>`<li class="${insightClass(s)}">${s}</li>`).join('')}
+      </ul>
+    </div>
+  </div>`;
+
+  // ── 模块五 ──────────────────────────────────────────────
+  html += `<div class="section-title">🟦 模块五：综合经营判断（决策层视角）</div>`;
+  const sc = m5.scores||{};
+  html += `<div class="chart-card" style="margin-bottom:14px">
+    <div class="chart-title">🏆 组织健康度综合评分（满分5分） — 综合得分：<span style="color:#ffd54f;font-size:18px">${m5.overall_score}</span></div>
+    <div class="score-grid">
+      ${Object.entries(sc).map(([k,v])=>{const col=scoreColor(v);return `
+      <div class="score-item">
+        <div class="score-circle" style="background:${col.bg};border-color:${col.border};color:${col.text}">${v}</div>
+        <div class="score-label">${k}</div>
+      </div>`}).join('')}
+    </div>
+  </div>`;
+
+  html += `<div class="chart-row cols2">
+    <div class="chart-card">
+      <div class="chart-title">🚨 当前最大3个风险点</div>
+      <ul class="insight-list">
+        ${(m5.top_risks||[]).map(r=>`<li class="warn">${r}</li>`).join('')}
+      </ul>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">🚀 当前最大3个优化空间</div>
+      <ul class="insight-list">
+        ${(m5.top_opts||[]).map(o=>`<li class="sug">${o}</li>`).join('')}
+      </ul>
+    </div>
+  </div>`;
+
+  html += `<div class="chart-row cols2">
+    <div class="chart-card">
+      <div class="chart-title">📅 未来3个月优先3件事</div>
+      <ul class="insight-list">
+        ${(m5.top3_actions||[]).map(a=>`<li class="info">${a}</li>`).join('')}
+      </ul>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">📌 建议重点监控指标</div>
+      <ul class="insight-list">
+        ${(m5.monitor_kpis||[]).map(k=>`<li class="info">${k}</li>`).join('')}
+      </ul>
+    </div>
+  </div>`;
+
+  // 行业对比
+  const bench = m5.industry_benchmark||{};
+  html += `<div class="chart-card" style="margin-bottom:24px">
+    <div class="chart-title">🌐 行业头部审核公司质检团队对比参考</div>
+    <table class="bench-table">
+      <thead><tr><th>对比维度</th><th>头部公司基准</th></tr></thead>
+      <tbody>
+        ${Object.entries(bench).map(([k,v])=>`<tr><td style="color:#90caf9;font-weight:600;width:160px">${k}</td><td>${v}</td></tr>`).join('')}
+      </tbody>
+    </table>
+  </div>`;
+
+  document.getElementById('mainContent').innerHTML = html;
+
+  // ══ 渲染图表 ══════════════════════════════════════════
+  // 各组分布柱图（自营/联营堆叠）
+  const grpKeys = Object.keys(grp);
+  const zyByGrp = grpZy; // grpZy = m1.group_zy_detail，已在上方定义
+  const grpZyVals = grpKeys.map(g=>(zyByGrp[g]&&zyByGrp[g].自营)||0);
+  const grpLyVals = grpKeys.map(g=>(zyByGrp[g]&&zyByGrp[g].联营)||0);
+  ec('ch_grp', {
+    backgroundColor:'transparent',
+    tooltip:{trigger:'axis',axisPointer:{type:'shadow'},backgroundColor:'#1a2744',borderColor:'#29b6f6',textStyle:{color:'#e8f0fe',fontSize:12},
+      formatter:function(params){
+        const g=params[0].name;
+        const zy=(zyByGrp[g]&&zyByGrp[g].自营)||0;
+        const ly=(zyByGrp[g]&&zyByGrp[g].联营)||0;
+        const tot=zy+ly;
+        return `${g}<br/>🔵 自营：${zy}人 (${tot>0?Math.round(zy/tot*100):0}%)<br/>🟠 联营：${ly}人 (${tot>0?Math.round(ly/tot*100):0}%)<br/>合计：${tot}人`;
+      }},
+    legend:{top:0,data:['自营','联营'],textStyle:{color:'#90caf9',fontSize:11}},
+    grid:{left:120,right:60,top:36,bottom:30},
+    xAxis:{type:'value',axisLabel:{color:'#546e7a',fontSize:11},axisLine:{lineStyle:{color:'#1a2744'}},splitLine:{lineStyle:{color:'rgba(255,255,255,.05)'}}},
+    yAxis:{type:'category',data:grpKeys,axisLabel:{color:'#90caf9',fontSize:12},axisLine:{show:false},axisTick:{show:false}},
+    series:[
+      {name:'自营',type:'bar',stack:'total',barMaxWidth:32,data:grpZyVals,
+        itemStyle:{color:'#29b6f6',borderRadius:[0,0,0,0]},
+        label:{show:true,position:'inside',color:'#fff',fontSize:10,formatter:p=>p.value>0?p.value:''}},
+      {name:'联营',type:'bar',stack:'total',barMaxWidth:32,data:grpLyVals,
+        itemStyle:{color:'#ffa726',borderRadius:[0,6,6,0]},
+        label:{show:true,position:'inside',color:'#fff',fontSize:10,formatter:p=>p.value>0?p.value:''},
+        endLabel:{show:true,color:'#e8f0fe',fontSize:11,formatter:p=>{
+          const tot=(grpZyVals[p.dataIndex]||0)+(grpLyVals[p.dataIndex]||0);
+          return tot+'人';
+        }}}
+    ]
+  });
+
+  // 自营联营
+  ec('ch_zy', {
+    backgroundColor:'transparent',
+    tooltip:{trigger:'item',backgroundColor:'#1a2744',borderColor:'#29b6f6',textStyle:{color:'#e8f0fe'}},
+    legend:{bottom:0,textStyle:{color:'#90caf9',fontSize:11}},
+    series:[{type:'pie',radius:['50%','75%'],center:['50%','45%'],
+      data:[{value:m1.ziying,name:'自营',itemStyle:{color:'#29b6f6'}},{value:m1.lianying,name:'联营',itemStyle:{color:'#ffa726'}}],
+      label:{color:'#e8f0fe',fontSize:12,formatter:'{b}\n{c}人 ({d}%)'},
+      emphasis:{itemStyle:{shadowBlur:10,shadowColor:'rgba(0,0,0,.5)'}}}]
+  });
+
+  // 各组自营/联营堆叠柱图
+  if(Object.keys(grpZy).length > 0){
+    const grpZyN = Object.keys(grpZy).sort();
+    const zyVals = grpZyN.map(g => grpZy[g].自营||0);
+    const lyVals = grpZyN.map(g => grpZy[g].联营||0);
+    ec('ch_grp_zy', {
+      backgroundColor:'transparent',
+      tooltip:{trigger:'axis',axisPointer:{type:'shadow'},backgroundColor:'#1a2744',textStyle:{color:'#e8f0fe',fontSize:12},
+        formatter:function(p){
+          const g=p[0].name;
+          const zy=grpZy[g]?.自营||0, ly=grpZy[g]?.联营||0, tot=zy+ly;
+          return `${g}<br/>自营：${zy}人 (${tot>0?nf(zy/tot*100,0):0}%)<br/>联营：${ly}人 (${tot>0?nf(ly/tot*100,0):0}%)<br/>合计：${tot}人`;
+        }},
+      legend:{top:0,data:['自营','联营'],textStyle:{color:'#90caf9',fontSize:11}},
+      grid:{left:130,right:20,top:36,bottom:30},
+      xAxis:{type:'value',axisLabel:{color:'#546e7a',fontSize:11},splitLine:{lineStyle:{color:'rgba(255,255,255,.05)'}}},
+      yAxis:{type:'category',data:grpZyN,axisLabel:{color:'#90caf9',fontSize:11},axisLine:{show:false},axisTick:{show:false}},
+      series:[
+        {name:'自营',type:'bar',stack:'total',barMaxWidth:28,data:zyVals,
+          itemStyle:{color:'#29b6f6',borderRadius:[0,0,0,0]},
+          label:{show:true,position:'inside',color:'#fff',fontSize:10,formatter:p=>p.value>0?p.value:''}},
+        {name:'联营',type:'bar',stack:'total',barMaxWidth:28,data:lyVals,
+          itemStyle:{color:'#ffa726',borderRadius:[0,6,6,0]},
+          label:{show:true,position:'inside',color:'#fff',fontSize:10,formatter:p=>p.value>0?p.value:''}}
+      ]
+    });
+  }
+
+  // 各组本月vs上月环比
+  const prevGrp = m1.prev_group_dist||{};
+  if(Object.keys(prevGrp).length > 0 || Object.keys(grp).length > 0){
+    const allGrps = [...new Set([...Object.keys(grp),...Object.keys(prevGrp)])].sort();
+    ec('ch_grp_delta', {
+      backgroundColor:'transparent',
+      tooltip:{trigger:'axis',axisPointer:{type:'shadow'},backgroundColor:'#1a2744',textStyle:{color:'#e8f0fe',fontSize:12},
+        formatter:function(p){
+          const g=p[0].name;
+          const cur=grp[g]||0, prev=prevGrp[g]||0, d=cur-prev;
+          return `${g}<br/>本月：${cur}人<br/>上月：${prev||'无数据'}<br/>变化：${d>0?'▲':'▼'}${Math.abs(d)}人`;
+        }},
+      legend:{top:0,textStyle:{color:'#90caf9',fontSize:11}},
+      grid:{left:130,right:20,top:36,bottom:30},
+      xAxis:{type:'value',axisLabel:{color:'#546e7a',fontSize:11},splitLine:{lineStyle:{color:'rgba(255,255,255,.05)'}}},
+      yAxis:{type:'category',data:allGrps,axisLabel:{color:'#90caf9',fontSize:11},axisLine:{show:false},axisTick:{show:false}},
+      series:[
+        {name:'本月',type:'bar',barGap:'20%',barMaxWidth:16,data:allGrps.map(g=>grp[g]||0),
+          itemStyle:{color:'#29b6f6',borderRadius:[0,4,4,0]},
+          label:{show:true,position:'right',color:'#e8f0fe',fontSize:10,formatter:'{c}人'}},
+        {name:'上月',type:'bar',barMaxWidth:16,data:allGrps.map(g=>prevGrp[g]||0),
+          itemStyle:{color:'rgba(41,182,246,.3)',borderRadius:[0,4,4,0]},
+          label:{show:true,position:'right',color:'#546e7a',fontSize:10,formatter:p=>p.value?p.value+'人':''}}
+      ]
+    });
+  }
+
+  // 城市分布（模块一，显示全部城市）
+  const cityD = m1.city_dist||{};
+  ec('ch_city', {
+    backgroundColor:'transparent',
+    tooltip:{trigger:'item',backgroundColor:'#1a2744',textStyle:{color:'#e8f0fe'},
+      formatter:'{b}: {c}人 ({d}%)'},
+    legend:{bottom:0,textStyle:{color:'#90caf9',fontSize:10},type:'scroll'},
+    series:[{type:'pie',radius:'65%',center:['50%','44%'],
+      data:Object.entries(cityD).sort((a,b)=>b[1]-a[1]).map(([k,v],i)=>({
+        value:v,name:k,itemStyle:{color:PALETTE[i%PALETTE.length]}})),
+      label:{fontSize:10,color:'#e8f0fe'}}]
+  });
+
+  // 组织健康仪表
+  ec('ch_health', {
+    backgroundColor:'transparent',
+    series:[{type:'gauge',center:['50%','60%'],radius:'75%',
+      min:0,max:100,
+      startAngle:200,endAngle:-20,
+      pointer:{itemStyle:{color:'auto'}},
+      progress:{show:true,roundCap:true,width:12},
+      axisLine:{roundCap:true,lineStyle:{width:12,color:[[.3,'#ef5350'],[.6,'#ffa726'],[1,'#4caf50']]}},
+      splitLine:{length:12,lineStyle:{color:'auto',width:2}},
+      axisTick:{distance:-20,length:6,lineStyle:{color:'auto'}},
+      axisLabel:{distance:-35,color:'#546e7a',fontSize:10},
+      title:{show:true,offsetCenter:[0,'80%'],color:'#90caf9',fontSize:11},
+      detail:{valueAnimation:true,formatter:'{value}',color:'auto',fontSize:22,offsetCenter:[0,'30%'],fontWeight:'bold'},
+      data:[{value:Math.round(100-(m1.leave_rate*100+Math.max(0,m1.mgmt_span-15)*2)),name:'组织健康度'}]
+    }]
+  });
+
+  // 人员流动（多月趋势，横轴为月份）
+  const flowData = (m1.monthly_flow || []);
+  const flowLabels = flowData.map(r => r.month);
+  const flowActive = flowData.map(r => r.active);
+  const flowJoin   = flowData.map(r => r.join);
+  const flowLeave  = flowData.map(r => r.leave);
+  ec('ch_flow', {
+    backgroundColor:'transparent',
+    tooltip:{trigger:'axis',backgroundColor:'#1a2744',textStyle:{color:'#e8f0fe'},
+      formatter: function(params){
+        let s = `<b style="color:#e8f0fe">${params[0].axisValue}</b><br/>`;
+        params.forEach(p => { s += `${p.marker}${p.seriesName}：<b>${p.value}</b>人<br/>`; });
+        return s;
+      }
+    },
+    legend:{top:0,textStyle:{color:'#90caf9',fontSize:11}},
+    grid:{left:40,right:20,top:30,bottom:30},
+    xAxis:{type:'category',data:flowLabels,
+      axisLabel:{color:'#90caf9'},
+      axisLine:{lineStyle:{color:'rgba(255,255,255,.1)'}}
+    },
+    yAxis:{axisLabel:{color:'#546e7a'},splitLine:{lineStyle:{color:'rgba(255,255,255,.05)'}}},
+    series:[
+      {name:'在职（含入职）',type:'bar',barMaxWidth:32,barGap:'20%',
+        data:flowActive,
+        itemStyle:{color:'#29b6f6',borderRadius:[6,6,0,0]},
+        label:{show:true,position:'top',color:'#90caf9',fontSize:10,
+          formatter:function(p){
+            const join = flowJoin[p.dataIndex]||0;
+            return join>0 ? `{total|${p.value}}\n{join|▲${join}入职}` : `${p.value}`;
+          },
+          rich:{
+            total:{color:'#90caf9',fontSize:10},
+            join:{color:'#69f0ae',fontSize:9,fontWeight:'bold'}
+          }
+        }
+      },
+      {name:'离职',type:'bar',barMaxWidth:32,barGap:'20%',
+        data:flowLeave,
+        itemStyle:{color:'#ef5350',borderRadius:[6,6,0,0]},
+        label:{show:true,position:'top',color:'#ef9a9a',fontSize:10,formatter:function(p){return p.value>0?p.value:'';}}
+      }
+    ]
+  });
+
+  // 职级金字塔
+  const lvlKeys = Object.keys(lvl).sort();
+  ec('ch_lvl', {
+    backgroundColor:'transparent',
+    tooltip:{trigger:'axis',backgroundColor:'#1a2744',textStyle:{color:'#e8f0fe'}},
+    grid:{left:60,right:20,top:10,bottom:30},
+    xAxis:{type:'value',axisLabel:{color:'#546e7a',fontSize:11},splitLine:{lineStyle:{color:'rgba(255,255,255,.05)'}}},
+    yAxis:{type:'category',data:lvlKeys,axisLabel:{color:'#90caf9',fontSize:11},axisLine:{show:false}},
+    series:[{type:'bar',data:lvlKeys.map(k=>lvl[k]),barMaxWidth:30,
+      itemStyle:{borderRadius:[0,6,6,0],
+        color:function(p){const t=lvlKeys.length;const r=p.dataIndex/t;return r<0.3?'#4caf50':r<0.7?'#29b6f6':'#5c6bc0'}},
+      label:{show:true,position:'right',color:'#e8f0fe',fontSize:11,formatter:'{c}人'}}]
+  });
+
+  // AI能力档位
+  const aiColors={
+    // 高能力档位 - 亮绿/青色（能力强）
+    '精通':'#00e676','独立运维':'#00bcd4',
+    // 培养中档位 - 蓝紫系（成长中）
+    '低能高意高潜':'#40c4ff','中能高意高潜':'#448aff','高能高意高潜':'#7c4dff',
+    // 联营/甲方/待盘 - 橙红系（需关注）
+    '联营未盘':'#ff6d00','甲方质检未盘':'#ff3d00','管理未盘':'#ffab40','培训组未盘':'#ffd740',
+    // 其他/未定位 - 粉紫系
+    '未列入培养对象':'#f06292','新入职未定位':'#ce93d8',
+    // 旧版兼容
+    '入门':'#ef9a9a','熟练':'#64b5f6','未填写':'#546e7a','':'#546e7a'
+  };
+  // 兜底调色板（用于未知档位名）- 高饱和度高区分度
+  const aiPalette=['#40c4ff','#ff6d00','#00e676','#f06292','#ff3d00','#00bcd4','#ffd740','#7c4dff','#448aff','#ffab40','#ce93d8','#26a69a'];
+  let _aiIdx=0;
+  ec('ch_ai', {
+    backgroundColor:'transparent',
+    tooltip:{trigger:'item',backgroundColor:'#1a2744',borderColor:'#29b6f6',textStyle:{color:'#e8f0fe'},formatter:p=>`${p.name}<br/>${p.value}人 (${p.percent}%)`},
+    legend:{bottom:0,itemWidth:10,itemHeight:10,textStyle:{color:'#90caf9',fontSize:11},pageTextStyle:{color:'#90caf9'}},
+    series:[{type:'pie',radius:['42%','68%'],center:['50%','44%'],
+      data:Object.entries(aiDist).map(([k,v])=>{
+        let c=aiColors[k];
+        if(!c){c=aiPalette[_aiIdx%aiPalette.length];_aiIdx++;}
+        return {value:v,name:k||'未填写',itemStyle:{color:c}};
+      }),
+      emphasis:{itemStyle:{shadowBlur:10,shadowColor:'rgba(0,0,0,.4)'}},
+      label:{color:'#e8f0fe',fontSize:11,formatter:'{b} {d}%'},
+      labelLine:{lineStyle:{color:'rgba(255,255,255,.3)'}}}]
+  });
+
+
+  // 城市（模块二，显示全部城市）
+  const cityD2 = m2.city_dist||{};
+  const citySorted = Object.keys(cityD2).sort((a,b)=>cityD2[a]-cityD2[b]);
+  ec('ch_city2', {
+    backgroundColor:'transparent',
+    tooltip:{trigger:'axis',backgroundColor:'#1a2744',textStyle:{color:'#e8f0fe'}},
+    grid:{left:120,right:60,top:10,bottom:30},
+    xAxis:{type:'value',axisLabel:{color:'#546e7a',fontSize:11},splitLine:{lineStyle:{color:'rgba(255,255,255,.05)'}}},
+    yAxis:{type:'category',data:citySorted,
+      axisLabel:{color:'#90caf9',fontSize:11}},
+    series:[{type:'bar',data:citySorted.map(k=>cityD2[k]),
+      barMaxWidth:24,itemStyle:{borderRadius:[0,6,6,0],color:'#5c6bc0'},
+      label:{show:true,position:'right',color:'#e8f0fe',fontSize:11,formatter:'{c}人'}}]
+  });
+
+  // 项目体量图
+  if(!m3.no_data && projs.length>0){
+    const topProjs = [...projs].sort((a,b)=>(parseFloat(b['项目体量'])||0)-(parseFloat(a['项目体量'])||0)).slice(0,12);
+    ec('ch_proj_vol', {
+      backgroundColor:'transparent',
+      tooltip:{trigger:'axis',backgroundColor:'#1a2744',textStyle:{color:'#e8f0fe'}},
+      grid:{left:120,right:60,top:20,bottom:30},
+      xAxis:{type:'value',axisLabel:{color:'#546e7a',fontSize:11},splitLine:{lineStyle:{color:'rgba(255,255,255,.05)'}}},
+      yAxis:{type:'category',data:topProjs.map(p=>p['二级项目']||p['一级项目']||''),
+        axisLabel:{color:'#90caf9',fontSize:11}},
+      series:[
+        {name:'项目体量',type:'bar',data:topProjs.map(p=>parseFloat(p['项目体量'])||0),
+          barMaxWidth:20,itemStyle:{borderRadius:[0,6,6,0],color:'#29b6f6'},
+          label:{show:true,position:'right',color:'#ffd54f',fontSize:10,formatter:v=>(v==null||v.value==null?'—':parseFloat(v.value).toFixed(0))}},
+        {name:'质检投入',type:'bar',data:topProjs.map(p=>parseFloat(p['质检投入人数'])||0),
+          barMaxWidth:20,itemStyle:{borderRadius:[0,6,6,0],color:'#ab47bc'},
+          label:{show:false}}
+      ]
+    });
+
+    // 准确率散点
+    const validProjs = projs.filter(p=>parseFloat(p['准确率'])>0);
+    ec('ch_proj_acc', {
+      backgroundColor:'transparent',
+      tooltip:{trigger:'item',backgroundColor:'#1a2744',textStyle:{color:'#e8f0fe'},
+        formatter:p=>`${p.data[3]}<br/>准确率：${p.data[0]}%<br/>质检投入：${p.data[1]}人`},
+      grid:{left:50,right:20,top:30,bottom:50},
+      xAxis:{name:'准确率(%)',nameTextStyle:{color:'#546e7a',fontSize:11},
+        axisLabel:{color:'#546e7a',fontSize:11},min:90,
+        splitLine:{lineStyle:{color:'rgba(255,255,255,.05)'}}},
+      yAxis:{name:'质检投入人数',nameTextStyle:{color:'#546e7a',fontSize:11},
+        axisLabel:{color:'#546e7a',fontSize:11},
+        splitLine:{lineStyle:{color:'rgba(255,255,255,.05)'}}},
+      series:[{type:'scatter',symbolSize:14,
+        data:validProjs.map(p=>[
+          parseFloat(p['准确率'])||0,
+          parseFloat(p['质检投入人数'])||0,
+          parseFloat(p['项目体量'])||0,
+          p['二级项目']||p['一级项目']||''
+        ]),
+        itemStyle:{color:function(p){
+          const acc=p.data[0];
+          return acc>=98?'#4caf50':acc>=95?'#ffa726':'#ef5350';
+        }},
+        label:{show:true,formatter:p=>p.data[3].substring(0,4),color:'#e8f0fe',fontSize:9,position:'top'}}]
+    });
+
+    // 渲染项目列表（含质检人天和配比）
+    const pfEl = document.getElementById('projFlow');
+    if(pfEl){
+      pfEl.innerHTML = projs.slice(0,20).map((p,i)=>{
+        const acc = parseFloat(p['准确率'])||0;
+        const status = p['项目达标情况']||'';
+        const qcMd = parseFloat(p['质检人天'])||0;
+        const dlMd = parseFloat(p['交付人天'])||0;
+        const ratio = p['质检交付配比']||'N/A';
+        let statusClass = 'status-pending', statusText = '待评';
+        if(status.includes('达标')&&!status.includes('未')) { statusClass='status-ok'; statusText='✅ 达标'; }
+        else if(status.includes('未达标')) { statusClass='status-fail'; statusText='❌ 未达标'; }
+        return `<div class="proj-item" style="animation:slideIn .3s ease ${i*0.05}s both;grid-template-columns:1.5fr auto auto auto auto auto auto auto">
+          <div>
+            <div class="proj-name">${p['二级项目']||p['三级项目']||p['一级项目']||'—'}</div>
+            <div class="proj-sub">${p['一级项目']||''} · ${p['项目难度']||'—'}难度 · ${p['项目优先级']||'—'}</div>
+          </div>
+          <div style="text-align:center">
+            <div style="font-size:10px;color:#546e7a;margin-bottom:2px">项目体量</div>
+            <div class="proj-vol">${(parseFloat(p['项目体量'])||0).toLocaleString()}</div>
+          </div>
+          <div style="text-align:center">
+            <div style="font-size:10px;color:#546e7a;margin-bottom:2px">质检投入人数</div>
+            <div style="font-size:13px;font-weight:600;color:#29b6f6">${parseFloat(p['质检投入人数'])>0?parseFloat(p['质检投入人数']):'—'}</div>
+          </div>
+          <div style="text-align:center">
+            <div style="font-size:10px;color:#546e7a;margin-bottom:2px">质检人天合计</div>
+            <div style="font-size:13px;font-weight:600;color:#ab47bc">${qcMd>0?nf(qcMd,1):'—'}</div>
+          </div>
+          <div style="text-align:center">
+            <div style="font-size:10px;color:#546e7a;margin-bottom:2px">交付人天</div>
+            <div style="font-size:13px;color:#26c6da">${dlMd>0?n(dlMd).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g,','):'—'}</div>
+          </div>
+          <div style="text-align:center">
+            <div style="font-size:10px;color:#546e7a;margin-bottom:2px">质检:交付</div>
+            <div style="font-size:12px;font-weight:600;color:#ffd54f">${ratio}</div>
+          </div>
+          <div class="proj-acc" style="color:${acc>=98?'#4caf50':acc>=95?'#ffa726':'#ef5350'};text-align:center">
+            <div style="font-size:10px;color:#546e7a;margin-bottom:2px">准确率</div>
+            ${acc>0?nf(acc,1)+'%':'—'}
+          </div>
+          <div class="proj-status ${statusClass}">${statusText}</div>
+        </div>`;
+      }).join('');
+    }
+  }
+
+  // 绩效分布
+  if(!m4.no_data){
+    const perfD = m4.perf_dist||{};
+    if(Object.keys(perfD).length>0){
+      const perfColors={'A+':'#ffd54f','A':'#4caf50','B':'#29b6f6','C':'#ffa726','D':'#ef5350','未评':'#546e7a'};
+      ec('ch_perf', {
+        backgroundColor:'transparent',
+        tooltip:{trigger:'item',backgroundColor:'#1a2744',textStyle:{color:'#e8f0fe'}},
+        legend:{bottom:0,textStyle:{color:'#90caf9',fontSize:11}},
+        series:[{type:'pie',radius:'60%',center:['50%','44%'],
+          data:Object.entries(perfD).map(([k,v])=>({value:v,name:k,
+            itemStyle:{color:perfColors[k]||'#546e7a'}})),
+          label:{color:'#e8f0fe',fontSize:12,formatter:'{b} {d}%'}}]
+      });
+    }
+    const lvlCost = m4.level_avg_cost||{};
+    if(Object.keys(lvlCost).length>0){
+      ec('ch_lvl_cost', {
+        backgroundColor:'transparent',
+        tooltip:{trigger:'axis',backgroundColor:'#1a2744',textStyle:{color:'#e8f0fe'},
+          formatter:p=>`${p[0].name}<br/>人均基本工资：${p[0].value!=null?p[0].value.toLocaleString():'—'}元`},
+        grid:{left:60,right:20,top:10,bottom:40},
+        xAxis:{type:'category',data:Object.keys(lvlCost),axisLabel:{color:'#90caf9',fontSize:11}},
+        yAxis:{axisLabel:{color:'#546e7a',fontSize:11,formatter:v=>(v!=null?(v/1000)+'k':'0')},
+          splitLine:{lineStyle:{color:'rgba(255,255,255,.05)'}}},
+        series:[{type:'bar',data:Object.values(lvlCost),barMaxWidth:36,
+          itemStyle:{borderRadius:[6,6,0,0],
+            color:function(p){return ['#5c6bc0','#29b6f6','#4caf50','#ffa726','#ef5350'][p.dataIndex]||'#29b6f6'}},
+          label:{show:true,position:'top',color:'#ffd54f',fontSize:11,
+            formatter:p=>(p.value!=null?(p.value/1000).toFixed(1)+'k':'—')}}]
+      });
+    }
+  }
+}
+
+// ══ 启动 ══════════════════════════════════════════════════
+fetch('/api/analysis')
+  .then(r=>r.json())
+  .then(data=>{
+    if(data.error){ 
+      document.getElementById('mainContent').innerHTML = 
+        `<div class="chart-card"><div class="no-data">⚠️ ${data.error}<br><br><span style="color:#546e7a">（静态版）</span></div></div>`;
+      return;
+    }
+    try{ render(data); }
+    catch(e){
+      console.error('render error:', e);
+      document.getElementById('mainContent').innerHTML = 
+        `<div class="chart-card"><div class="no-data">⚠️ 渲染失败：${e.message}<br><pre style="font-size:10px;text-align:left;color:#ff8a65;overflow:auto;max-height:300px">${e.stack||''}</pre></div></div>`;
+    }
+  })
+  .catch(e=>{
+    console.error('fetch error:', e);
+    document.getElementById('mainContent').innerHTML = 
+      `<div class="chart-card"><div class="no-data">⚠️ 加载失败：${e.message}</div></div>`;
+  });
+
+// 滚动进度条
+window.addEventListener('scroll',()=>{
+  const d = document.documentElement;
+  const pct = d.scrollTop/(d.scrollHeight-d.clientHeight)*100;
+  document.getElementById('progressBar').style.width = pct+'%';
+});
+
+// ══ 粒子背景 ══════════════════════════════════════════════
+(function initParticles(){
+  const canvas = document.getElementById('particles-canvas');
+  if(!canvas) return;
+  const ctx = canvas.getContext('2d');
+  let W, H, particles = [];
+  const N = 60;
+  function resize(){ W=canvas.width=window.innerWidth; H=canvas.height=window.innerHeight; }
+  resize();
+  window.addEventListener('resize', resize);
+  for(let i=0;i<N;i++){
+    particles.push({
+      x: Math.random()*W, y: Math.random()*H,
+      vx: (Math.random()-.5)*.4, vy: (Math.random()-.5)*.4,
+      r: Math.random()*2+1,
+      a: Math.random()*.7+.15
+    });
+  }
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    for(let i=0;i<N;i++){
+      const p=particles[i];
+      p.x+=p.vx; p.y+=p.vy;
+      if(p.x<0||p.x>W) p.vx*=-1;
+      if(p.y<0||p.y>H) p.vy*=-1;
+      ctx.beginPath();
+      ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+      ctx.fillStyle=`rgba(41,182,246,${p.a})`;
+      ctx.fill();
+      // 连线
+      for(let j=i+1;j<N;j++){
+        const q=particles[j];
+        const d=Math.hypot(p.x-q.x,p.y-q.y);
+        if(d<120){
+          ctx.beginPath();
+          ctx.moveTo(p.x,p.y);
+          ctx.lineTo(q.x,q.y);
+          ctx.strokeStyle=`rgba(41,182,246,${.12*(1-d/120)})`;
+          ctx.lineWidth=.8;
+          ctx.stroke();
+        }
+      }
+    }
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+// ══ 数字滚动计数 ══════════════════════════════════════════
+function animateNumber(el, target, duration, suffix){
+  if(el.__rolling) return;
+  el.__rolling = true;
+  const isFloat = !Number.isInteger(target);
+  const digits = isFloat ? (String(target).split('.')[1]||'').length : 0;
+  const start = performance.now();
+  function step(now){
+    const t = Math.min((now-start)/duration,1);
+    const ease = 1-Math.pow(1-t,3);
+    const val = target*ease;
+    el.textContent = (isFloat ? val.toFixed(digits) : Math.round(val)) + (suffix||'');
+    if(t<1) requestAnimationFrame(step);
+    else el.textContent = (isFloat ? target.toFixed(digits) : target) + (suffix||'');
+  }
+  requestAnimationFrame(step);
+}
+
+// 渲染完成后启动数字动画
+const _origRender = window.renderDone;
+function startKpiAnimation(){
+  document.querySelectorAll('.kpi-val').forEach(el=>{
+    const raw = el.textContent.trim();
+    const suffix = raw.replace(/[\d.]/g,'');
+    const num = parseFloat(raw);
+    if(!isNaN(num) && num>0){
+      el.textContent = '0' + suffix;
+      animateNumber(el, num, 1200, suffix);
+    }
+  });
+}
+
+// ══ Intersection Observer 卡片入场 ══════════════════════
+function setupCardObserver(){
+  const cards = document.querySelectorAll('.chart-card');
+  const observer = new IntersectionObserver((entries)=>{
+    entries.forEach((entry,idx)=>{
+      if(entry.isIntersecting){
+        entry.target.style.animationDelay = (idx*0.06)+'s';
+        entry.target.style.animationPlayState = 'running';
+        observer.unobserve(entry.target);
+      }
+    });
+  },{threshold:0.1});
+  cards.forEach(c=>{ c.style.animationPlayState='paused'; observer.observe(c); });
+}
+
+// ══ 表格行错峰入场 ═══════════════════════════════════════
+function setupTableAnimation(){
+  document.querySelectorAll('.overview-table tbody tr').forEach((tr,i)=>{
+    tr.style.animationDelay = (i*0.04)+'s';
+  });
+  document.querySelectorAll('.insight-list li').forEach((li,i)=>{
+    li.style.animationDelay = (i*0.07)+'s';
+  });
+}
+
+// ══ 在 render 后 hook ════════════════════════════════════
+const _origFetchHandler = window.fetch;
+// 等待 DOM 渲染完成后执行动画初始化
+const _mutObs = new MutationObserver(()=>{
+  if(document.querySelectorAll('.kpi-val').length > 0){
+    _mutObs.disconnect();
+    setTimeout(()=>{
+      startKpiAnimation();
+      setupCardObserver();
+      setupTableAnimation();
+    }, 100);
+  }
+});
+_mutObs.observe(document.getElementById('mainContent')||document.body, {childList:true, subtree:true});
+</script>
+</body>
+</html>
