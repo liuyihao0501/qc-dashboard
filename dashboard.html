@@ -1,0 +1,1223 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>📊 质检团队经营分析看板（2026-03-23 13:43:28）</title>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg-deep:#080e1f;
+  --bg-card:rgba(255,255,255,.04);
+  --border:rgba(255,255,255,.08);
+  --blue1:#29b6f6;--blue2:#1565c0;--blue3:#0d47a1;
+  --green:#4caf50;--orange:#ff9800;--red:#f44336;
+  --text-main:#e8f0fe;--text-sub:#90caf9;--text-dim:#546e7a;
+}
+body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg-deep);color:var(--text-main);min-height:100vh;overflow-x:hidden}
+
+/* ── 顶部 ── */
+.topbar{background:linear-gradient(90deg,#080e1f 0%,#0d1a3a 50%,#080e1f 100%);border-bottom:1px solid rgba(41,182,246,.2);padding:0 28px;display:flex;align-items:center;justify-content:space-between;height:64px;position:sticky;top:0;z-index:100;backdrop-filter:blur(20px)}
+.logo{display:flex;align-items:center;gap:10px}
+.logo-icon{width:36px;height:36px;background:linear-gradient(135deg,#1565c0,#29b6f6);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px}
+.logo-text{font-size:16px;font-weight:700;background:linear-gradient(90deg,#81d4fa,#e3f2fd);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.top-nav{display:flex;gap:8px}
+.top-nav a{padding:7px 18px;border-radius:20px;text-decoration:none;font-size:13px;transition:all .2s;color:var(--text-sub)}
+.top-nav a.active{background:linear-gradient(90deg,#1565c0,#1976d2);color:#fff;box-shadow:0 2px 12px rgba(21,101,192,.4)}
+.top-nav a:not(.active):hover{background:rgba(255,255,255,.06)}
+.top-meta{display:flex;align-items:center;gap:12px;font-size:12px;color:var(--text-dim)}
+#monthTag{background:rgba(41,182,246,.15);color:var(--blue1);border:1px solid rgba(41,182,246,.3);padding:3px 12px;border-radius:12px}
+#timeTag{color:var(--text-dim)}
+
+/* ── 布局 ── */
+.main{padding:20px 24px;max-width:1600px;margin:0 auto}
+.section-title{font-size:14px;font-weight:700;color:var(--blue1);margin:24px 0 14px;display:flex;align-items:center;gap:8px;letter-spacing:1px}
+.section-title::before{content:"";width:3px;height:16px;background:linear-gradient(180deg,var(--blue1),var(--blue2));border-radius:2px}
+/* ── 总览表格 ── */
+.overview-table-wrap{overflow-x:auto;margin-bottom:20px;border-radius:12px;border:1px solid var(--border)}
+.overview-table{width:100%;border-collapse:collapse;font-size:12px;min-width:960px}
+.overview-table thead tr{background:linear-gradient(135deg,rgba(21,101,192,.45),rgba(13,71,161,.35));border-bottom:2px solid var(--blue1)}
+.overview-table thead th{padding:10px 12px;color:var(--blue1);font-weight:600;text-align:center;white-space:nowrap;letter-spacing:.3px}
+.overview-table tbody tr{border-bottom:1px solid rgba(255,255,255,.04);transition:background .15s}
+.overview-table tbody tr:hover{background:rgba(41,182,246,.07)}
+.overview-table tbody tr.ov-alt{background:rgba(255,255,255,.02)}
+.overview-table tbody tr.ov-total{background:rgba(21,101,192,.2);border-top:2px solid rgba(41,182,246,.4);font-weight:700}
+.overview-table td{padding:9px 12px;text-align:center;color:var(--text-sub)}
+.overview-table .ov-name{text-align:left;color:var(--text-main);font-weight:600;min-width:110px}
+.overview-table .ov-num{color:var(--blue1);font-size:14px;font-weight:700}
+.overview-table .ov-muted{color:var(--text-dim)}
+.overview-table .risk-high{color:#ef5350;font-weight:600}
+.overview-table .risk-mid{color:#ffa726;font-weight:600}
+.overview-table .risk-low{color:#66bb6a;font-weight:600}
+
+/* ── KPI 卡片 ── */
+.kpi-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:4px}
+.kpi-card{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:16px 14px;position:relative;overflow:hidden;transition:transform .2s}
+.kpi-card:hover{transform:translateY(-2px)}
+.kpi-card::after{content:"";position:absolute;bottom:0;left:0;right:0;height:2px;background:var(--accent,var(--blue1))}
+.kpi-label{font-size:11px;color:var(--text-dim);margin-bottom:6px}
+.kpi-val{font-size:26px;font-weight:700;color:var(--text-main);line-height:1}
+.kpi-delta{font-size:11px;margin-top:6px}
+.kpi-delta.up{color:#4caf50}
+.kpi-delta.down{color:#f44336}
+.kpi-delta.flat{color:var(--text-dim)}
+.kpi-icon{position:absolute;top:12px;right:12px;font-size:22px;opacity:.3}
+
+/* ── 图表卡片 ── */
+.chart-row{display:grid;gap:14px;margin-bottom:14px}
+.chart-row.cols2{grid-template-columns:1fr 1fr}
+.chart-row.cols3{grid-template-columns:1fr 1fr 1fr}
+.chart-row.cols21{grid-template-columns:2fr 1fr}
+.chart-row.cols12{grid-template-columns:1fr 2fr}
+.chart-card{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:18px 16px;position:relative}
+.chart-title{font-size:13px;font-weight:600;color:var(--text-sub);margin-bottom:12px;display:flex;align-items:center;gap:6px}
+.chart-title .badge{font-size:10px;background:rgba(41,182,246,.15);color:var(--blue1);border:1px solid rgba(41,182,246,.3);padding:2px 8px;border-radius:10px}
+.chart-box{width:100%}
+/* 风险标签 */
+.risk-tag{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:8px;font-size:11px;font-weight:600}
+.risk-high{background:rgba(244,67,54,.12);color:#ef5350;border:1px solid rgba(244,67,54,.3)}
+.risk-med{background:rgba(255,152,0,.12);color:#ffa726;border:1px solid rgba(255,152,0,.3)}
+.risk-ok{background:rgba(76,175,80,.12);color:#66bb6a;border:1px solid rgba(76,175,80,.3)}
+/* 结论/建议块 */
+.insight-list{list-style:none;padding:0}
+.insight-list li{padding:8px 12px;border-radius:8px;margin-bottom:6px;font-size:12px;line-height:1.7;border-left:3px solid transparent}
+.insight-list li.warn{background:rgba(244,67,54,.06);border-color:#ef5350;color:#ef9a9a}
+.insight-list li.ok{background:rgba(76,175,80,.06);border-color:#66bb6a;color:#a5d6a7}
+.insight-list li.info{background:rgba(41,182,246,.06);border-color:var(--blue1);color:#81d4fa}
+.insight-list li.sug{background:rgba(255,193,7,.06);border-color:#ffc107;color:#ffe082}
+/* 行业对比表 */
+.bench-table{width:100%;border-collapse:collapse;font-size:12px}
+.bench-table th{background:rgba(21,101,192,.3);color:#90caf9;padding:8px 12px;text-align:left;font-weight:600}
+.bench-table td{padding:8px 12px;border-bottom:1px solid rgba(255,255,255,.05);line-height:1.6}
+.bench-table tr:hover td{background:rgba(255,255,255,.03)}
+/* 综合评分 */
+.score-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
+.score-item{text-align:center;padding:14px 8px}
+.score-circle{width:60px;height:60px;border-radius:50%;margin:0 auto 8px;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;border:3px solid}
+.score-label{font-size:11px;color:var(--text-sub)}
+/* 加载 */
+.loading{text-align:center;padding:80px;color:var(--text-sub)}
+.loading-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--blue1);margin:0 3px;animation:blink 1s infinite}
+.loading-dot:nth-child(2){animation-delay:.2s}
+.loading-dot:nth-child(3){animation-delay:.4s}
+@keyframes blink{0%,100%{opacity:.2}50%{opacity:1}}
+/* 项目动态 */
+.proj-flow{display:flex;flex-direction:column;gap:10px}
+.proj-item{background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:10px;padding:12px 14px;display:grid;grid-template-columns:1fr auto auto auto auto;gap:12px;align-items:center;transition:all .3s}
+.proj-item:hover{background:rgba(41,182,246,.06);border-color:rgba(41,182,246,.2);transform:translateX(4px)}
+.proj-name{font-size:13px;font-weight:600;color:var(--text-main)}
+.proj-sub{font-size:11px;color:var(--text-dim);margin-top:2px}
+.proj-vol{font-size:12px;color:#ffd54f}
+.proj-acc{font-size:12px;font-weight:600}
+.proj-status{font-size:11px;padding:3px 10px;border-radius:10px}
+.status-ok{background:rgba(76,175,80,.15);color:#81c784}
+.status-fail{background:rgba(244,67,54,.15);color:#ef9a9a}
+.status-pending{background:rgba(255,193,7,.15);color:#ffe082}
+/* 无数据 */
+.no-data{text-align:center;padding:40px;color:var(--text-dim);font-size:13px}
+.no-data a{color:var(--blue1);text-decoration:underline}
+/* 滚动进度 */
+.progress-bar{position:fixed;top:0;left:0;height:2px;background:linear-gradient(90deg,var(--blue2),var(--blue1));width:0%;z-index:200;transition:width .1s}
+</style>
+</head>
+<body>
+<div class="progress-bar" id="progressBar"></div>
+<div class="topbar">
+  <div class="logo">
+    <div class="logo-icon">🔍</div>
+    <div class="logo-text">质检团队经营分析看板</div>
+  </div>
+  <div class="top-nav">
+    <a href="/form">📋 数据收集</a>
+    <a href="/dashboard" class="active">📊 经营看板</a>
+  </div>
+  <div class="top-meta">
+    <span id="monthTag">加载中…</span>
+    <span id="timeTag">—</span>
+  </div>
+</div>
+
+<div class="main" id="mainContent">
+  <div class="loading">
+    <div><span class="loading-dot"></span><span class="loading-dot"></span><span class="loading-dot"></span></div>
+    <p style="margin-top:16px;font-size:14px">正在加载分析数据…</p>
+  </div>
+</div>
+
+<script>
+// ══ 工具 ══════════════════════════════════════════════════
+const PALETTE = ['#29b6f6','#1e88e5','#5c6bc0','#42a5f5','#26c6da','#ab47bc','#ef5350','#ffa726','#66bb6a','#d4e157','#26a69a'];
+const LIGHT = 'rgba(255,255,255,.06)';
+
+function ec(id, opt){
+  const el = document.getElementById(id);
+  if(!el) return;
+  const chart = echarts.init(el, null, {renderer:'canvas'});
+  chart.setOption(opt);
+  window.addEventListener('resize', ()=>chart.resize());
+  return chart;
+}
+
+function kpiClass(delta){
+  if(!delta||delta==='N/A') return 'flat';
+  return delta.includes('▲') ? 'up' : 'down';
+}
+
+function insightClass(text){
+  if(text.includes('⚠️')||text.includes('风险')) return 'warn';
+  if(text.includes('✅')) return 'ok';
+  if(text.includes('【建议')) return 'sug';
+  return 'info';
+}
+
+function scoreColor(s){
+  if(s>=4.5) return {bg:'rgba(76,175,80,.2)',border:'#4caf50',text:'#81c784'};
+  if(s>=3.5) return {bg:'rgba(41,182,246,.2)',border:'#29b6f6',text:'#81d4fa'};
+  if(s>=2.5) return {bg:'rgba(255,152,0,.2)',border:'#ff9800',text:'#ffb74d'};
+  return {bg:'rgba(244,67,54,.2)',border:'#f44336',text:'#ef9a9a'};
+}
+
+// ══ 安全数值工具 ══════════════════════════════════════════
+/** 将任意值转为 number，null/undefined/NaN 返回 fallback */
+function n(v, fallback=0){ const r=parseFloat(v); return isNaN(r)?fallback:r; }
+/** 安全 toFixed：n(v).toFixed(d) → 替代裸 v.toFixed(d) */
+function nf(v, d=1, fallback='—'){ const r=parseFloat(v); return isNaN(r)?fallback:r.toFixed(d); }
+
+// ══ 渲染 ══════════════════════════════════════════════════
+function render(data){
+  const m1=data.module1, m2=data.module2, m3=data.module3, m4=data.module4, m5=data.module5;
+  document.getElementById('monthTag').textContent = data.month+' 数据';
+  document.getElementById('timeTag').textContent = '生成于 '+data.generated_at;
+
+  let html = '';
+
+  // ── 总览：各组在职人数分布 ──────────────────────────────
+  const ovRows = (m1.overview_table||[]);
+  if(ovRows.length > 0){
+    html += `<div class="section-title" style="margin-top:0">📋 各组在职人数分布</div>`;
+    html += `<div class="overview-table-wrap"><table class="overview-table"><thead><tr>
+      <th>组别</th><th>在职人数</th><th>占比</th><th>自营</th>
+      <th>自营运营族</th><th>自营交付族</th><th>联营</th><th>业务方自管</th><th>本组自营占比</th>
+      <th>管理人数</th><th>在招需求</th><th>本月入职</th><th>本月离职</th>
+      <th>管理比例</th><th>人才流失风险</th>
+    </tr></thead><tbody>`;
+    ovRows.forEach((r,i)=>{
+      const isTotal = r['组别']==='合计';
+      const trCls = isTotal?'ov-total':(i%2===1?'ov-alt':'');
+      const risk = r['人才流失风险']||'—';
+      const rCls = risk.includes('🔴')?'risk-high':risk.includes('🟡')?'risk-mid':'risk-low';
+      html += `<tr class="${trCls}">
+        <td class="ov-name">${r['组别']}</td>
+        <td class="ov-num">${r['在职人数']}</td>
+        <td>${r['占比']}</td>
+        <td>${r['自营']}</td>
+        <td>${r['自营运营族']}</td>
+        <td>${r['自营交付族']}</td>
+        <td>${r['联营']}</td>
+        <td>${r['业务方自管']||0}</td>
+        <td>${r['自营占比']}</td>
+        <td>${r['管理人数']}</td>
+        <td class="ov-muted">${r['在招需求']}</td>
+        <td>${r['本月入职']}</td>
+        <td>${r['本月离职']}</td>
+        <td>${r['管理比例']}</td>
+        <td class="${isTotal?'':'risk-cell '+rCls}">${isTotal?'—':risk}</td>
+      </tr>`;
+    });
+    html += `</tbody></table></div>`;
+  }
+
+  // ── 模块一 ──────────────────────────────────────────────
+  html += `<div class="section-title">🟦 模块一：人力编制与组织健康度</div>`;
+
+  // KPI行
+  const grp = m1.group_dist||{};
+  const grpNames = Object.keys(grp);
+  const totalGrp = grpNames.reduce((s,k)=>s+grp[k],0);
+  html += `<div class="kpi-grid">
+    <div class="kpi-card" style="--accent:#29b6f6">
+      <div class="kpi-icon">👥</div>
+      <div class="kpi-label">在职总人数</div>
+      <div class="kpi-val">${m1.in_service}</div>
+      <div class="kpi-delta ${kpiClass(m1.delta_total_pct)}">${m1.delta_total_pct||'—'} 环比</div>
+    </div>
+    <div class="kpi-card" style="--accent:#4caf50">
+      <div class="kpi-icon">📥</div>
+      <div class="kpi-label">本月入职</div>
+      <div class="kpi-val">${m1.join}</div>
+      <div class="kpi-delta flat">入职率 ${nf(m1.join_rate!=null?m1.join_rate*100:null,1)}%</div>
+    </div>
+    <div class="kpi-card" style="--accent:#f44336">
+      <div class="kpi-icon">📤</div>
+      <div class="kpi-label">本月离职</div>
+      <div class="kpi-val">${m1.leave}</div>
+      <div class="kpi-delta ${n(m1.leave_rate)>0.03?'down':'flat'}">离职率 ${nf(m1.leave_rate!=null?n(m1.leave_rate)*100:null,1)}%</div>
+    </div>
+    <div class="kpi-card" style="--accent:#ffa726">
+      <div class="kpi-icon">🏢</div>
+      <div class="kpi-label">管理岗人数</div>
+      <div class="kpi-val">${m1.manager_count}</div>
+      <div class="kpi-delta flat">管理比例 ${nf(m1.mgmt_ratio!=null?n(m1.mgmt_ratio)*100:null,1)}%</div>
+    </div>
+    <div class="kpi-card" style="--accent:#ab47bc">
+      <div class="kpi-icon">📐</div>
+      <div class="kpi-label">管理跨度</div>
+      <div class="kpi-val">${nf(m1.mgmt_span,0)}:1</div>
+      <div class="kpi-delta ${n(m1.mgmt_span)>20?'down':n(m1.mgmt_span)>15?'warn':'ok'}">${n(m1.mgmt_span)>20?'⚠️超载':n(m1.mgmt_span)>15?'偏高':'✅健康'}</div>
+    </div>
+    <div class="kpi-card" style="--accent:#26c6da">
+      <div class="kpi-icon">🔗</div>
+      <div class="kpi-label">联营占比</div>
+      <div class="kpi-val">${n(m1.in_service)>0?nf(n(m1.lianying)/n(m1.in_service)*100,0):0}%</div>
+      <div class="kpi-delta flat">联营 ${m1.lianying} / 自营 ${m1.ziying} / 业务方自管 ${m1.yewufang||0}</div>
+    </div>
+  </div>`;
+
+  // 图表行1
+  html += `<div class="chart-row cols21">
+    <div class="chart-card">
+      <div class="chart-title">各组人数分布 <span class="badge">质量管理3组与3组-甲方分开统计</span></div>
+      <div id="ch_grp" class="chart-box" style="height:240px"></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">自营 vs 联营</div>
+      <div id="ch_zy" class="chart-box" style="height:240px"></div>
+    </div>
+  </div>`;
+
+  // 图表行2
+  html += `<div class="chart-row cols3">
+    <div class="chart-card">
+      <div class="chart-title">工作地分布</div>
+      <div id="ch_city" class="chart-box" style="height:220px"></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">组织健康指标</div>
+      <div id="ch_health" class="chart-box" style="height:220px"></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">人员流动分析</div>
+      <div id="ch_flow" class="chart-box" style="height:220px"></div>
+    </div>
+  </div>`;
+
+  // ── 各组自营/联营月度明细 ──────────────────────────────
+  const grpZy = m1.group_zy_detail || {};
+  const prevGrpZy = m1.prev_group_zy_detail || {};
+  const grpZyNames = Object.keys(grpZy);
+  html += `<div class="chart-row cols2">
+    <div class="chart-card">
+      <div class="chart-title">📊 各组自营 / 联营人数分布 <span class="badge">含本月详细拆分</span></div>
+      <div id="ch_grp_zy" class="chart-box" style="height:260px"></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">📈 各组本月 vs 上月人数环比</div>
+      <div id="ch_grp_delta" class="chart-box" style="height:260px"></div>
+    </div>
+  </div>`;
+
+  // ── 离职人员明细表 ────────────────────────────────────
+  const leaveList = m1.leave_detail || [];
+  const keyLeaveNames = m1.key_leave_names || [];
+  html += `<div class="chart-card" style="margin-bottom:14px">
+    <div class="chart-title">🚪 本月离职人员明细
+      ${keyLeaveNames.length>0 ? `<span class="risk-tag risk-high" style="margin-left:8px">⚠️ ${keyLeaveNames.length}名骨干离职：${keyLeaveNames.join('、')}</span>` : '<span class="risk-tag risk-ok">✅ 本月无骨干离职</span>'}
+    </div>
+    ${leaveList.length === 0 ? '<div class="no-data" style="padding:20px">✅ 本月无离职记录</div>' : `
+    <table style="width:100%;border-collapse:collapse;font-size:12px">
+      <thead>
+        <tr>
+          ${['姓名','所在组','职级','角色','类型','工作地','职位','离职时间','风险标记'].map(h=>`<th style="background:rgba(21,101,192,.3);color:#90caf9;padding:8px 10px;text-align:left;font-weight:600;white-space:nowrap">${h}</th>`).join('')}
+        </tr>
+      </thead>
+      <tbody>
+        ${leaveList.map(p=>`
+        <tr style="border-bottom:1px solid rgba(255,255,255,.05);transition:background .15s" onmouseover="this.style.background='rgba(255,255,255,.03)'" onmouseout="this.style.background=''">
+          <td style="padding:8px 10px;color:#e8f0fe;font-weight:600">${p.姓名}</td>
+          <td style="padding:8px 10px;color:#90caf9">${p.组}</td>
+          <td style="padding:8px 10px;color:#ffd54f">${p.职级}</td>
+          <td style="padding:8px 10px;color:#81d4fa">${p.角色}</td>
+          <td style="padding:8px 10px"><span style="padding:2px 8px;border-radius:8px;font-size:11px;background:${p.类型==='自营'?'rgba(76,175,80,.15)':'rgba(255,152,0,.15)'};color:${p.类型==='自营'?'#81c784':'#ffb74d'}">${p.类型}</span></td>
+          <td style="padding:8px 10px;color:#90caf9">${p.工作地}</td>
+          <td style="padding:8px 10px;color:#b0bec5">${p.职位}</td>
+          <td style="padding:8px 10px;color:#b0bec5">${p.离职时间}</td>
+          <td style="padding:8px 10px"><span class="risk-tag ${p.是否骨干.includes('骨干')?'risk-high':'risk-ok'}">${p.是否骨干}</span></td>
+        </tr>`).join('')}
+      </tbody>
+    </table>`}
+  </div>`;
+
+  // 结论建议
+  html += `<div class="chart-row cols2">
+    <div class="chart-card">
+      <div class="chart-title">📋 分析结论</div>
+      <ul class="insight-list">
+        ${(m1.conclusions||[]).map(c=>`<li class="${insightClass(c)}">${c}</li>`).join('')}
+      </ul>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">💡 优化建议</div>
+      <ul class="insight-list">
+        ${(m1.suggestions||[]).map(s=>`<li class="${insightClass(s)}">${s}</li>`).join('')}
+      </ul>
+    </div>
+  </div>`;
+
+  // ── 模块二 ──────────────────────────────────────────────
+  html += `<div class="section-title">🟦 模块二：人才结构分析</div>`;
+  const lvl = m2.level_dist||{};
+  const aiDist = m2.ai_dist||{};
+  const talentDist = m2.talent_dist||{};
+  const totalStaff = Object.values(lvl).reduce((s,v)=>s+v,0)||1;
+
+  html += `<div class="chart-row cols2">
+    <div class="chart-card" id="lvlCard">
+      <div class="chart-title" style="display:flex;align-items:center;justify-content:space-between">
+        <span>职级金字塔</span>
+        <button id="lvlToggleBtn" onclick="(function(){var el=document.getElementById('ch_lvl');var btn=document.getElementById('lvlToggleBtn');if(el.style.display==='none'){el.style.display='';btn.textContent='收起';}else{el.style.display='none';btn.textContent='展开';}})()" style="font-size:11px;padding:2px 10px;border-radius:10px;border:1px solid rgba(41,182,246,.4);background:rgba(41,182,246,.1);color:#29b6f6;cursor:pointer;flex-shrink:0">收起</button>
+      </div>
+      <div id="ch_lvl" class="chart-box" style="height:250px"></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">AI能力档位分布 ${m2.ai_empty>0?`<span class="risk-tag risk-high">⚠️ ${m2.ai_empty}人未填写</span>`:'<span class="risk-tag risk-ok">✅ 数据完整</span>'}</div>
+      <div id="ch_ai" class="chart-box" style="height:250px"></div>
+    </div>
+  </div>`;
+
+  html += `<div class="chart-row cols1">
+    <div class="chart-card">
+      <div class="chart-title">城市结构分布</div>
+      <div id="ch_city2" class="chart-box" style="height:260px"></div>
+    </div>
+  </div>`;
+
+  html += `<div class="chart-row cols2">
+    <div class="chart-card">
+      <div class="chart-title">📋 结构分析结论</div>
+      <ul class="insight-list">
+        ${(m2.conclusions||[]).map(c=>`<li class="${insightClass(c)}">${c}</li>`).join('')}
+      </ul>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">💡 结构优化建议（3-5条）</div>
+      <ul class="insight-list">
+        ${(m2.suggestions||[]).map(s=>`<li class="${insightClass(s)}">${s}</li>`).join('')}
+      </ul>
+    </div>
+  </div>`;
+
+  // ── 模块三 ──────────────────────────────────────────────
+  html += `<div class="section-title">🟦 模块三：项目经营维度</div>`;
+  const projs = m3.projects||[];
+
+  if(m3.no_data){
+    html += `<div class="chart-card"><div class="no-data">📭 项目经营数据暂未上传<br><a href="/form">前往上传附件2：项目经营数据</a></div></div>`;
+  } else {
+    html += `<div class="kpi-grid" style="grid-template-columns:repeat(6,1fr)">
+      <div class="kpi-card" style="--accent:#ffa726">
+        <div class="kpi-icon">📁</div>
+        <div class="kpi-label">项目总数</div>
+        <div class="kpi-val">${m3.total_projects}</div>
+      </div>
+      <div class="kpi-card" style="--accent:#4caf50">
+        <div class="kpi-icon">✅</div>
+        <div class="kpi-label">项目达标数</div>
+        <div class="kpi-val">${m3.reach_count}</div>
+        <div class="kpi-delta flat">达标率 ${nf(m3.reach_rate!=null?n(m3.reach_rate)*100:null,1)}%</div>
+      </div>
+      <div class="kpi-card" style="--accent:#ab47bc">
+        <div class="kpi-icon">🔬</div>
+        <div class="kpi-label">总质检人天</div>
+        <div class="kpi-val" style="font-size:20px">${m3.total_qc_manday>0?m3.total_qc_manday.toLocaleString():'—'}</div>
+      </div>
+      <div class="kpi-card" style="--accent:#26c6da">
+        <div class="kpi-icon">🚀</div>
+        <div class="kpi-label">总交付人天</div>
+        <div class="kpi-val" style="font-size:20px">${m3.total_deliver_manday>0?Math.round(m3.total_deliver_manday).toLocaleString():'—'}</div>
+      </div>
+      <div class="kpi-card" style="--accent:#ffd54f">
+        <div class="kpi-icon">⚖️</div>
+        <div class="kpi-label">整体质检:交付</div>
+        <div class="kpi-val" style="font-size:18px">${m3.overall_qc_deliver_ratio||'N/A'}</div>
+        <div class="kpi-delta flat">人天口径</div>
+      </div>
+      <div class="kpi-card" style="--accent:#ef5350">
+        <div class="kpi-icon">🔥</div>
+        <div class="kpi-label">高难/过配</div>
+        <div class="kpi-val">${m3.high_diff_count}</div>
+        <div class="kpi-delta flat">过配 ${(m3.overfit_projects||[]).length} · 不足 ${(m3.underfit_projects||[]).length}</div>
+      </div>
+    </div>`;
+
+    // 项目动态列表（带动画）
+    html += `<div class="chart-card" style="margin-bottom:14px">
+      <div class="chart-title">📊 项目全景动态看板 <span class="badge">实时更新</span></div>
+      <div class="proj-flow" id="projFlow"></div>
+    </div>`;
+
+    // 项目图表
+    html += `<div class="chart-row cols2">
+      <div class="chart-card">
+        <div class="chart-title">各项目体量分布（横向对比）</div>
+        <div id="ch_proj_vol" class="chart-box" style="height:280px"></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">项目达标率 vs 准确率</div>
+        <div id="ch_proj_acc" class="chart-box" style="height:280px"></div>
+      </div>
+    </div>`;
+  }
+
+  html += `<div class="chart-row cols2">
+    <div class="chart-card">
+      <div class="chart-title">📋 经营风险提示</div>
+      <ul class="insight-list">
+        ${(m3.conclusions||[]).map(c=>`<li class="${insightClass(c)}">${c}</li>`).join('')}
+      </ul>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">💡 项目优化建议</div>
+      <ul class="insight-list">
+        ${(m3.suggestions||[]).map(s=>`<li class="${insightClass(s)}">${s}</li>`).join('')}
+      </ul>
+    </div>
+  </div>`;
+
+  // ── 模块四 ──────────────────────────────────────────────
+  html += `<div class="section-title">🟦 模块四：人力成本与效能</div>`;
+  if(m4.no_data){
+    html += `<div class="chart-card"><div class="no-data">📭 薪酬成本数据暂未上传<br><a href="/form">前往上传附件3：薪酬与成本数据</a></div></div>`;
+  } else {
+    html += `<div class="kpi-grid">
+      <div class="kpi-card" style="--accent:#4caf50">
+        <div class="kpi-icon">💰</div>
+        <div class="kpi-label">人均月成本</div>
+        <div class="kpi-val" style="font-size:20px">${m4.avg_cost?m4.avg_cost.toLocaleString()+'元':'—'}</div>
+      </div>
+      <div class="kpi-card" style="--accent:#29b6f6">
+        <div class="kpi-icon">📊</div>
+        <div class="kpi-label">人均基本工资</div>
+        <div class="kpi-val" style="font-size:20px">${m4.avg_基本工资?m4.avg_基本工资.toLocaleString()+'元':'—'}</div>
+      </div>
+      <div class="kpi-card" style="--accent:#ffa726">
+        <div class="kpi-icon">⏰</div>
+        <div class="kpi-label">加班工时合计</div>
+        <div class="kpi-val">${m4.total_overtime?nf(m4.total_overtime,0)+'h':'—'}</div>
+        <div class="kpi-delta flat">转薪 ${m4.total_ot_pay?nf(m4.total_ot_pay,0)+'h':'—'}</div>
+      </div>
+      <div class="kpi-card" style="--accent:#ef5350">
+        <div class="kpi-icon">⏳</div>
+        <div class="kpi-label">即将过期调休</div>
+        <div class="kpi-val" style="color:#ef5350">${m4.total_expire?nf(m4.total_expire,0)+'h':'—'}</div>
+        <div class="kpi-delta ${m4.total_expire>0?'down':'flat'}">${m4.total_expire>0?'⚠️ 需尽快安排':'✅ 无'}</div>
+      </div>
+      <div class="kpi-card" style="--accent:#ab47bc">
+        <div class="kpi-icon">🎯</div>
+        <div class="kpi-label">高绩效占比</div>
+        <div class="kpi-val">${m4.high_perf_rate?nf(n(m4.high_perf_rate)*100,1)+'%':'—'}</div>
+      </div>
+      <div class="kpi-card" style="--accent:#ef5350">
+        <div class="kpi-icon">💼</div>
+        <div class="kpi-label">本月招聘成本</div>
+        <div class="kpi-val" style="font-size:20px">${m4.total_招聘成本?m4.total_招聘成本.toLocaleString()+'元':'—'}</div>
+      </div>
+      <div class="kpi-card" style="--accent:#26c6da">
+        <div class="kpi-icon">📋</div>
+        <div class="kpi-label">统计人数</div>
+        <div class="kpi-val">${m4.total_staff||0}</div>
+      </div>
+    </div>`;
+
+    // ── 加班 & 调休汇总区域 ────────────────────────────
+    const otTable = m4.overtime_table || [];
+    const expireList = m4.expire_list || [];
+    if(otTable.length > 0){
+      const otRows = otTable.map((r,i)=>{
+        const isTotal = r['组别']==='合计';
+        const trCls = isTotal?'ov-total':(i%2===1?'ov-alt':'');
+        const expireVal = r['即将过期调休(h)']||0;
+        const expireColor = expireVal > 100 ? '#ef5350' : expireVal > 30 ? '#ffa726' : '#4caf50';
+        return `<tr class="${trCls}">
+          <td class="ov-name">${r['组别']}</td>
+          <td style="text-align:center;color:#ffa726;font-weight:600">${r['本月加班时长合计(h)']}</td>
+          <td style="text-align:center;color:#ab47bc;font-weight:600">${r['本月加班转薪合计(h)']}</td>
+          <td style="text-align:center;font-weight:700;color:${expireColor}">${r['即将过期调休(h)']}</td>
+        </tr>`;
+      }).join('');
+      html += `<div class="chart-card" style="margin-bottom:14px">
+        <div class="chart-title">⏰ 加班 & 调休汇总（各组）</div>
+        <table class="overview-table" style="width:auto;min-width:520px">
+          <thead><tr>
+            <th>组别</th>
+            <th style="color:#ffa726">本月加班时长合计(h)</th>
+            <th style="color:#ab47bc">本月加班转薪合计(h)</th>
+            <th style="color:#ef5350">即将过期调休(h)⚠️</th>
+          </tr></thead>
+          <tbody>${otRows}</tbody>
+        </table>
+      </div>`;
+    }
+    if(expireList.length > 0){
+      const grpMap = {};
+      expireList.forEach(e=>{ if(!grpMap[e['组别']]) grpMap[e['组别']]=[]; grpMap[e['组别']].push(e); });
+      const grpOrder = ['质量管理1组','质量管理2组','质量管理3组','质量管理3组-甲方','培训管理组'];
+      const sortedGrps = [...grpOrder.filter(g=>grpMap[g]), ...Object.keys(grpMap).filter(g=>!grpOrder.includes(g))];
+      let expireHtml = '';
+      sortedGrps.forEach(grp=>{
+        const members = grpMap[grp];
+        if(!members || members.length===0) return;
+        const totalH = members.reduce((s,e)=>s+e['调休工时(h)'],0).toFixed(1);
+        const memberHtml = members.map(e=>{
+          const h = e['调休工时(h)'];
+          const color = h>=100?'#ef5350':h>=30?'#ffa726':'#90caf9';
+          return `<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;background:rgba(255,255,255,.04);border-radius:6px;border:1px solid rgba(255,255,255,.07)">
+            <span style="color:#e8f0fe;font-weight:600">${e['姓名']}</span>
+            <span style="color:${color};font-weight:700;font-size:12px">${h}h</span>
+          </span>`;
+        }).join('');
+        expireHtml += `<div style="margin-bottom:12px">
+          <div style="font-size:12px;font-weight:600;color:#90caf9;margin-bottom:8px;padding:5px 10px;background:rgba(41,182,246,0.08);border-left:3px solid #29b6f6;border-radius:0 4px 4px 0;display:flex;align-items:center;gap:8px">
+            <span>${grp}</span><span style="color:#546e7a">·</span>
+            <span style="color:#ffa726">${members.length}人</span><span style="color:#546e7a">·</span>
+            <span style="color:#ef5350">${totalH}h</span>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;padding:0 4px">${memberHtml}</div>
+        </div>`;
+      });
+      // 详细表格
+      const tableRows = expireList.map((e,i)=>{
+        const h=e['调休工时(h)']; const color=h>=100?'#ef5350':h>=30?'#ffa726':'#4caf50';
+        return `<tr class="${i%2===1?'ov-alt':''}">
+          <td style="color:#90caf9">${e['组别']}</td>
+          <td style="color:#546e7a;font-size:11px">${e['组2']||'—'}</td>
+          <td style="font-weight:600;color:#e8f0fe">${e['姓名']}</td>
+          <td style="color:#b0bec5;font-size:11px">${e['直接上级']||'—'}</td>
+          <td style="color:#78909c;font-size:11px">${e['职级']||'—'}</td>
+          <td style="text-align:center;font-weight:700;color:${color}">${h}h</td>
+        </tr>`;
+      }).join('');
+      html += `<div class="chart-card" style="margin-bottom:14px">
+        <div class="chart-title" style="display:flex;align-items:center;justify-content:space-between">
+          <span>⏳ 即将过期调休工时名单 <span class="badge" style="background:#ef5350">${expireList.length}人 · 合计${m4.total_expire||0}h</span></span>
+          <button id="expireViewBtn" onclick="toggleExpireView()" style="font-size:11px;padding:2px 10px;border-radius:10px;border:1px solid rgba(41,182,246,.4);background:rgba(41,182,246,.1);color:#29b6f6;cursor:pointer;flex-shrink:0">切换表格视图</button>
+        </div>
+        <div id="expireGrpDiv">${expireHtml}</div>
+        <div id="expireTableDiv" style="display:none;overflow-x:auto">
+          <table class="overview-table" style="width:100%;min-width:500px">
+            <thead><tr>
+              <th>组1</th><th>组2</th><th>员工姓名</th><th>直接上级</th><th>职级</th>
+              <th style="color:#ef5350">即将过期工时(h)</th>
+            </tr></thead>
+            <tbody>${tableRows}</tbody>
+          </table>
+        </div>
+      </div>`;
+    }
+    html += `<div class="chart-row cols2">
+      <div class="chart-card">
+        <div class="chart-title">绩效分布</div>
+        <div id="ch_perf" class="chart-box" style="height:220px"></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">职级人均成本</div>
+        <div id="ch_lvl_cost" class="chart-box" style="height:220px"></div>
+      </div>
+    </div>`;
+  }
+
+  html += `<div class="chart-row cols2">
+    <div class="chart-card">
+      <div class="chart-title">📋 成本分析结论</div>
+      <ul class="insight-list">
+        ${(m4.conclusions||[]).map(c=>`<li class="${insightClass(c)}">${c}</li>`).join('')}
+      </ul>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">💡 成本优化建议</div>
+      <ul class="insight-list">
+        ${(m4.suggestions||[]).map(s=>`<li class="${insightClass(s)}">${s}</li>`).join('')}
+      </ul>
+    </div>
+  </div>`;
+
+  // ── 模块五 ──────────────────────────────────────────────
+  html += `<div class="section-title">🟦 模块五：综合经营判断（决策层视角）</div>`;
+  const sc = m5.scores||{};
+  html += `<div class="chart-card" style="margin-bottom:14px">
+    <div class="chart-title">🏆 组织健康度综合评分（满分5分） — 综合得分：<span style="color:#ffd54f;font-size:18px">${m5.overall_score}</span></div>
+    <div class="score-grid">
+      ${Object.entries(sc).map(([k,v])=>{const col=scoreColor(v);return `
+      <div class="score-item">
+        <div class="score-circle" style="background:${col.bg};border-color:${col.border};color:${col.text}">${v}</div>
+        <div class="score-label">${k}</div>
+      </div>`}).join('')}
+    </div>
+  </div>`;
+
+  html += `<div class="chart-row cols2">
+    <div class="chart-card">
+      <div class="chart-title">🚨 当前最大3个风险点</div>
+      <ul class="insight-list">
+        ${(m5.top_risks||[]).map(r=>`<li class="warn">${r}</li>`).join('')}
+      </ul>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">🚀 当前最大3个优化空间</div>
+      <ul class="insight-list">
+        ${(m5.top_opts||[]).map(o=>`<li class="sug">${o}</li>`).join('')}
+      </ul>
+    </div>
+  </div>`;
+
+  html += `<div class="chart-row cols2">
+    <div class="chart-card">
+      <div class="chart-title">📅 未来3个月优先3件事</div>
+      <ul class="insight-list">
+        ${(m5.top3_actions||[]).map(a=>`<li class="info">${a}</li>`).join('')}
+      </ul>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">📌 建议重点监控指标</div>
+      <ul class="insight-list">
+        ${(m5.monitor_kpis||[]).map(k=>`<li class="info">${k}</li>`).join('')}
+      </ul>
+    </div>
+  </div>`;
+
+  // 行业对比
+  const bench = m5.industry_benchmark||{};
+  html += `<div class="chart-card" style="margin-bottom:24px">
+    <div class="chart-title">🌐 行业头部审核公司质检团队对比参考</div>
+    <table class="bench-table">
+      <thead><tr><th>对比维度</th><th>头部公司基准</th></tr></thead>
+      <tbody>
+        ${Object.entries(bench).map(([k,v])=>`<tr><td style="color:#90caf9;font-weight:600;width:160px">${k}</td><td>${v}</td></tr>`).join('')}
+      </tbody>
+    </table>
+  </div>`;
+
+  document.getElementById('mainContent').innerHTML = html;
+
+  // ══ 渲染图表 ══════════════════════════════════════════
+  // 各组分布柱图（自营/联营堆叠）
+  const grpKeys = Object.keys(grp);
+  const zyByGrp = grpZy; // grpZy = m1.group_zy_detail，已在上方定义
+  const grpZyVals = grpKeys.map(g=>(zyByGrp[g]&&zyByGrp[g].自营)||0);
+  const grpLyVals = grpKeys.map(g=>(zyByGrp[g]&&zyByGrp[g].联营)||0);
+  const grpYwfVals = grpKeys.map(g=>(zyByGrp[g]&&zyByGrp[g].业务方自管)||0);
+  ec('ch_grp', {
+    backgroundColor:'transparent',
+    tooltip:{trigger:'axis',axisPointer:{type:'shadow'},backgroundColor:'#1a2744',borderColor:'#29b6f6',textStyle:{color:'#e8f0fe',fontSize:12},
+      formatter:function(params){
+        const g=params[0].name;
+        const zy=(zyByGrp[g]&&zyByGrp[g].自营)||0;
+        const ly=(zyByGrp[g]&&zyByGrp[g].联营)||0;
+        const ywf=(zyByGrp[g]&&zyByGrp[g].业务方自管)||0;
+        const tot=zy+ly+ywf;
+        return `${g}<br/>🔵 自营：${zy}人 (${tot>0?Math.round(zy/tot*100):0}%)<br/>🟠 联营：${ly}人 (${tot>0?Math.round(ly/tot*100):0}%)`+(ywf>0?`<br/>🟣 业务方自管：${ywf}人 (${tot>0?Math.round(ywf/tot*100):0}%)`:'') +`<br/>合计：${tot}人`;
+      }},
+    legend:{top:0,data:['自营','联营','业务方自管'],textStyle:{color:'#90caf9',fontSize:11}},
+    grid:{left:120,right:60,top:36,bottom:30},
+    xAxis:{type:'value',axisLabel:{color:'#546e7a',fontSize:11},axisLine:{lineStyle:{color:'#1a2744'}},splitLine:{lineStyle:{color:'rgba(255,255,255,.05)'}}},
+    yAxis:{type:'category',data:grpKeys,axisLabel:{color:'#90caf9',fontSize:12},axisLine:{show:false},axisTick:{show:false}},
+    series:[
+      {name:'自营',type:'bar',stack:'total',barMaxWidth:32,data:grpZyVals,
+        itemStyle:{color:'#29b6f6',borderRadius:[0,0,0,0]},
+        label:{show:true,position:'inside',color:'#fff',fontSize:10,formatter:p=>p.value>0?p.value:''}},
+      {name:'联营',type:'bar',stack:'total',barMaxWidth:32,data:grpLyVals,
+        itemStyle:{color:'#ffa726',borderRadius:[0,0,0,0]},
+        label:{show:true,position:'inside',color:'#fff',fontSize:10,formatter:p=>p.value>0?p.value:''}},
+      {name:'业务方自管',type:'bar',stack:'total',barMaxWidth:32,data:grpYwfVals,
+        itemStyle:{color:'#ab47bc',borderRadius:[0,6,6,0]},
+        label:{show:true,position:'inside',color:'#fff',fontSize:10,formatter:p=>p.value>0?p.value:''},
+        endLabel:{show:true,color:'#e8f0fe',fontSize:11,formatter:p=>{
+          const idx=p.dataIndex;
+          const tot=(grpZyVals[idx]||0)+(grpLyVals[idx]||0)+(grpYwfVals[idx]||0);
+          return tot+'人';
+        }}}
+    ]
+  });
+
+  // 自营联营
+  ec('ch_zy', {
+    backgroundColor:'transparent',
+    tooltip:{trigger:'item',backgroundColor:'#1a2744',borderColor:'#29b6f6',textStyle:{color:'#e8f0fe'}},
+    legend:{bottom:0,textStyle:{color:'#90caf9',fontSize:11}},
+    series:[{type:'pie',radius:['50%','75%'],center:['50%','45%'],
+      data:[{value:m1.ziying,name:'自营',itemStyle:{color:'#29b6f6'}},{value:m1.lianying,name:'联营',itemStyle:{color:'#ffa726'}},{value:m1.yewufang||0,name:'业务方自管',itemStyle:{color:'#ab47bc'}}],
+      label:{color:'#e8f0fe',fontSize:12,formatter:'{b}\n{c}人 ({d}%)'},
+      emphasis:{itemStyle:{shadowBlur:10,shadowColor:'rgba(0,0,0,.5)'}}}]
+  });
+
+  // 各组自营/联营堆叠柱图
+  if(Object.keys(grpZy).length > 0){
+    const grpZyN = Object.keys(grpZy).sort((a,b)=>{
+      const o={'培训管理组':0,'质量管理1组':1,'质量管理2组':2,'质量管理3组':3,'质量管理3组-甲方':4};
+      return (o[a]??99)-(o[b]??99);
+    });
+    const zyVals  = grpZyN.map(g => grpZy[g].自营||0);
+    const lyVals  = grpZyN.map(g => grpZy[g].联营||0);
+    const ywfVals = grpZyN.map(g => grpZy[g].业务方自管||0);
+    ec('ch_grp_zy', {
+      backgroundColor:'transparent',
+      tooltip:{trigger:'axis',axisPointer:{type:'shadow'},backgroundColor:'#1a2744',textStyle:{color:'#e8f0fe',fontSize:12},
+        formatter:function(p){
+          const g=p[0].name;
+          const zy=grpZy[g]?.自营||0, ly=grpZy[g]?.联营||0, ywf=grpZy[g]?.业务方自管||0, tot=zy+ly+ywf;
+          return `${g}<br/>自营：${zy}人 (${tot>0?nf(zy/tot*100,0):0}%)<br/>联营：${ly}人 (${tot>0?nf(ly/tot*100,0):0}%)<br/>业务方自管：${ywf}人 (${tot>0?nf(ywf/tot*100,0):0}%)<br/>合计：${tot}人`;
+        }},
+      legend:{top:0,data:['自营','联营','业务方自管'],textStyle:{color:'#90caf9',fontSize:11}},
+      grid:{left:145,right:20,top:36,bottom:30},
+      xAxis:{type:'value',axisLabel:{color:'#546e7a',fontSize:11},splitLine:{lineStyle:{color:'rgba(255,255,255,.05)'}}},
+      yAxis:{type:'category',data:grpZyN,axisLabel:{color:'#90caf9',fontSize:11},axisLine:{show:false},axisTick:{show:false}},
+      series:[
+        {name:'自营',type:'bar',stack:'total',barMaxWidth:28,data:zyVals,
+          itemStyle:{color:'#29b6f6'},
+          label:{show:true,position:'inside',color:'#fff',fontSize:10,formatter:p=>p.value>0?p.value:''}},
+        {name:'联营',type:'bar',stack:'total',barMaxWidth:28,data:lyVals,
+          itemStyle:{color:'#ffa726'},
+          label:{show:true,position:'inside',color:'#fff',fontSize:10,formatter:p=>p.value>0?p.value:''}},
+        {name:'业务方自管',type:'bar',stack:'total',barMaxWidth:28,data:ywfVals,
+          itemStyle:{color:'#ab47bc',borderRadius:[0,6,6,0]},
+          label:{show:true,position:'inside',color:'#fff',fontSize:10,formatter:p=>p.value>0?p.value:''}}
+      ]
+    });
+  }
+
+  // 各组本月vs上月环比
+  const prevGrp = m1.prev_group_dist||{};
+  if(Object.keys(prevGrp).length > 0 || Object.keys(grp).length > 0){
+    const allGrps = [...new Set([...Object.keys(grp),...Object.keys(prevGrp)])].sort();
+    ec('ch_grp_delta', {
+      backgroundColor:'transparent',
+      tooltip:{trigger:'axis',axisPointer:{type:'shadow'},backgroundColor:'#1a2744',textStyle:{color:'#e8f0fe',fontSize:12},
+        formatter:function(p){
+          const g=p[0].name;
+          const cur=grp[g]||0, prev=prevGrp[g]||0, d=cur-prev;
+          return `${g}<br/>本月：${cur}人<br/>上月：${prev||'无数据'}<br/>变化：${d>0?'▲':'▼'}${Math.abs(d)}人`;
+        }},
+      legend:{top:0,textStyle:{color:'#90caf9',fontSize:11}},
+      grid:{left:130,right:20,top:36,bottom:30},
+      xAxis:{type:'value',axisLabel:{color:'#546e7a',fontSize:11},splitLine:{lineStyle:{color:'rgba(255,255,255,.05)'}}},
+      yAxis:{type:'category',data:allGrps,axisLabel:{color:'#90caf9',fontSize:11},axisLine:{show:false},axisTick:{show:false}},
+      series:[
+        {name:'本月',type:'bar',barGap:'20%',barMaxWidth:16,data:allGrps.map(g=>grp[g]||0),
+          itemStyle:{color:'#29b6f6',borderRadius:[0,4,4,0]},
+          label:{show:true,position:'right',color:'#e8f0fe',fontSize:10,formatter:'{c}人'}},
+        {name:'上月',type:'bar',barMaxWidth:16,data:allGrps.map(g=>prevGrp[g]||0),
+          itemStyle:{color:'rgba(41,182,246,.3)',borderRadius:[0,4,4,0]},
+          label:{show:true,position:'right',color:'#546e7a',fontSize:10,formatter:p=>p.value?p.value+'人':''}}
+      ]
+    });
+  }
+
+  // 城市分布（模块一，显示全部城市）
+  const cityD = m1.city_dist||{};
+  ec('ch_city', {
+    backgroundColor:'transparent',
+    tooltip:{trigger:'item',backgroundColor:'#1a2744',textStyle:{color:'#e8f0fe'},
+      formatter:'{b}: {c}人 ({d}%)'},
+    legend:{bottom:0,textStyle:{color:'#90caf9',fontSize:10},type:'scroll'},
+    series:[{type:'pie',radius:'65%',center:['50%','44%'],
+      data:Object.entries(cityD).sort((a,b)=>b[1]-a[1]).map(([k,v],i)=>({
+        value:v,name:k,itemStyle:{color:PALETTE[i%PALETTE.length]}})),
+      label:{fontSize:10,color:'#e8f0fe'}}]
+  });
+
+  // 组织健康仪表
+  ec('ch_health', {
+    backgroundColor:'transparent',
+    series:[{type:'gauge',center:['50%','60%'],radius:'75%',
+      min:0,max:100,
+      startAngle:200,endAngle:-20,
+      pointer:{itemStyle:{color:'auto'}},
+      progress:{show:true,roundCap:true,width:12},
+      axisLine:{roundCap:true,lineStyle:{width:12,color:[[.3,'#ef5350'],[.6,'#ffa726'],[1,'#4caf50']]}},
+      splitLine:{length:12,lineStyle:{color:'auto',width:2}},
+      axisTick:{distance:-20,length:6,lineStyle:{color:'auto'}},
+      axisLabel:{distance:-35,color:'#546e7a',fontSize:10},
+      title:{show:true,offsetCenter:[0,'80%'],color:'#90caf9',fontSize:11},
+      detail:{valueAnimation:true,formatter:'{value}',color:'auto',fontSize:22,offsetCenter:[0,'30%'],fontWeight:'bold'},
+      data:[{value:Math.round(100-(m1.leave_rate*100+Math.max(0,m1.mgmt_span-15)*2)),name:'组织健康度'}]
+    }]
+  });
+
+  // 人员流动（多月趋势，横轴为月份）
+  const flowData = (m1.monthly_flow || []);
+  const flowLabels = flowData.map(r => r.month);
+  const flowActive = flowData.map(r => r.active);
+  const flowJoin   = flowData.map(r => r.join);
+  const flowLeave  = flowData.map(r => r.leave);
+  ec('ch_flow', {
+    backgroundColor:'transparent',
+    tooltip:{trigger:'axis',backgroundColor:'#1a2744',textStyle:{color:'#e8f0fe'},
+      formatter: function(params){
+        let s = `<b style="color:#e8f0fe">${params[0].axisValue}</b><br/>`;
+        params.forEach(p => { s += `${p.marker}${p.seriesName}：<b>${p.value}</b>人<br/>`; });
+        return s;
+      }
+    },
+    legend:{top:0,textStyle:{color:'#90caf9',fontSize:11}},
+    grid:{left:40,right:20,top:30,bottom:30},
+    xAxis:{type:'category',data:flowLabels,
+      axisLabel:{color:'#90caf9'},
+      axisLine:{lineStyle:{color:'rgba(255,255,255,.1)'}}
+    },
+    yAxis:{axisLabel:{color:'#546e7a'},splitLine:{lineStyle:{color:'rgba(255,255,255,.05)'}}},
+    series:[
+      {name:'在职（含入职）',type:'bar',barMaxWidth:32,barGap:'20%',
+        data:flowActive,
+        itemStyle:{color:'#29b6f6',borderRadius:[6,6,0,0]},
+        label:{show:true,position:'top',color:'#90caf9',fontSize:10,
+          formatter:function(p){
+            const join = flowJoin[p.dataIndex]||0;
+            return join>0 ? `{total|${p.value}}\n{join|▲${join}入职}` : `${p.value}`;
+          },
+          rich:{
+            total:{color:'#90caf9',fontSize:10},
+            join:{color:'#69f0ae',fontSize:9,fontWeight:'bold'}
+          }
+        }
+      },
+      {name:'离职',type:'bar',barMaxWidth:32,barGap:'20%',
+        data:flowLeave,
+        itemStyle:{color:'#ef5350',borderRadius:[6,6,0,0]},
+        label:{show:true,position:'top',color:'#ef9a9a',fontSize:10,formatter:function(p){return p.value>0?p.value:'';}}
+      }
+    ]
+  });
+
+  // 职级金字塔
+  const lvlKeys = Object.keys(lvl).sort();
+  ec('ch_lvl', {
+    backgroundColor:'transparent',
+    tooltip:{trigger:'axis',backgroundColor:'#1a2744',textStyle:{color:'#e8f0fe'}},
+    grid:{left:60,right:20,top:10,bottom:30},
+    xAxis:{type:'value',axisLabel:{color:'#546e7a',fontSize:11},splitLine:{lineStyle:{color:'rgba(255,255,255,.05)'}}},
+    yAxis:{type:'category',data:lvlKeys,axisLabel:{color:'#90caf9',fontSize:11},axisLine:{show:false}},
+    series:[{type:'bar',data:lvlKeys.map(k=>lvl[k]),barMaxWidth:30,
+      itemStyle:{borderRadius:[0,6,6,0],
+        color:function(p){const t=lvlKeys.length;const r=p.dataIndex/t;return r<0.3?'#4caf50':r<0.7?'#29b6f6':'#5c6bc0'}},
+      label:{show:true,position:'right',color:'#e8f0fe',fontSize:11,formatter:'{c}人'}}]
+  });
+
+  // AI能力档位
+  const aiColors={
+    // 高能力档位 - 亮绿/青色（能力强）
+    '精通':'#00e676','独立运维':'#00bcd4',
+    // 培养中档位 - 蓝紫系（成长中）
+    '低能高意高潜':'#40c4ff','中能高意高潜':'#448aff','高能高意高潜':'#7c4dff',
+    // 联营/甲方/待盘 - 橙红系（需关注）
+    '联营未盘':'#ff6d00','甲方质检未盘':'#ff3d00','管理未盘':'#ffab40','培训组未盘':'#ffd740',
+    // 其他/未定位 - 粉紫系
+    '未列入培养对象':'#f06292','新入职未定位':'#ce93d8',
+    // 旧版兼容
+    '入门':'#ef9a9a','熟练':'#64b5f6','未填写':'#546e7a','':'#546e7a'
+  };
+  // 兜底调色板（用于未知档位名）- 高饱和度高区分度
+  const aiPalette=['#40c4ff','#ff6d00','#00e676','#f06292','#ff3d00','#00bcd4','#ffd740','#7c4dff','#448aff','#ffab40','#ce93d8','#26a69a'];
+  let _aiIdx=0;
+  ec('ch_ai', {
+    backgroundColor:'transparent',
+    tooltip:{trigger:'item',backgroundColor:'#1a2744',borderColor:'#29b6f6',textStyle:{color:'#e8f0fe'},formatter:p=>`${p.name}<br/>${p.value}人 (${p.percent}%)`},
+    legend:{bottom:0,itemWidth:10,itemHeight:10,textStyle:{color:'#90caf9',fontSize:11},pageTextStyle:{color:'#90caf9'}},
+    series:[{type:'pie',radius:['42%','68%'],center:['50%','44%'],
+      data:Object.entries(aiDist).map(([k,v])=>{
+        let c=aiColors[k];
+        if(!c){c=aiPalette[_aiIdx%aiPalette.length];_aiIdx++;}
+        return {value:v,name:k||'未填写',itemStyle:{color:c}};
+      }),
+      emphasis:{itemStyle:{shadowBlur:10,shadowColor:'rgba(0,0,0,.4)'}},
+      label:{color:'#e8f0fe',fontSize:11,formatter:'{b} {d}%'},
+      labelLine:{lineStyle:{color:'rgba(255,255,255,.3)'}}}]
+  });
+
+
+  // 城市（模块二，显示全部城市）
+  const cityD2 = m2.city_dist||{};
+  const citySorted = Object.keys(cityD2).sort((a,b)=>cityD2[a]-cityD2[b]);
+  ec('ch_city2', {
+    backgroundColor:'transparent',
+    tooltip:{trigger:'axis',backgroundColor:'#1a2744',textStyle:{color:'#e8f0fe'}},
+    grid:{left:120,right:60,top:10,bottom:30},
+    xAxis:{type:'value',axisLabel:{color:'#546e7a',fontSize:11},splitLine:{lineStyle:{color:'rgba(255,255,255,.05)'}}},
+    yAxis:{type:'category',data:citySorted,
+      axisLabel:{color:'#90caf9',fontSize:11}},
+    series:[{type:'bar',data:citySorted.map(k=>cityD2[k]),
+      barMaxWidth:24,itemStyle:{borderRadius:[0,6,6,0],color:'#5c6bc0'},
+      label:{show:true,position:'right',color:'#e8f0fe',fontSize:11,formatter:'{c}人'}}]
+  });
+
+  // 项目体量图
+  if(!m3.no_data && projs.length>0){
+    // 质检预算 vs 成本对比图（Top12项目，按预算降序）
+    const topProjs = [...projs].filter(p=>parseFloat(p['质检预算'])>0)
+      .sort((a,b)=>(parseFloat(b['质检预算'])||0)-(parseFloat(a['质检预算'])||0)).slice(0,12);
+    if(topProjs.length>0){
+      ec('ch_proj_vol',{
+        backgroundColor:'transparent',
+        tooltip:{trigger:'axis',axisPointer:{type:'shadow'},backgroundColor:'#1a2744',textStyle:{color:'#e8f0fe',fontSize:12},
+          formatter:function(p){
+            const proj=p[0].name;
+            const pp=projs.find(x=>(x['三级项目']||x['二级项目']||x['一级项目']||'')==proj)||{};
+            const bgt=parseFloat(pp['质检预算'])||0, cst=parseFloat(pp['质检成本'])||0;
+            const diff=bgt-cst, cls=diff>=0?'#4caf50':'#ef5350';
+            return `${proj}<br/>预算：¥${bgt.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g,',')}<br/>成本：¥${cst.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g,',')}<br/><span style="color:${cls}">盈亏：¥${diff.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g,',')}</span>`;
+          }},
+        legend:{top:0,data:['质检预算','质检成本'],textStyle:{color:'#90caf9',fontSize:11}},
+        grid:{left:140,right:20,top:36,bottom:30},
+        xAxis:{type:'value',axisLabel:{color:'#546e7a',fontSize:10,formatter:v=>v>=1e4?'¥'+(v/1e4).toFixed(0)+'万':'¥'+v},
+          splitLine:{lineStyle:{color:'rgba(255,255,255,.05)'}}},
+        yAxis:{type:'category',data:topProjs.map(p=>p['三级项目']||p['二级项目']||p['一级项目']||''),
+          axisLabel:{color:'#90caf9',fontSize:10,width:120,overflow:'truncate'},axisLine:{show:false},axisTick:{show:false}},
+        series:[
+          {name:'质检预算',type:'bar',barMaxWidth:14,barGap:'20%',
+            data:topProjs.map(p=>parseFloat(p['质检预算'])||0),
+            itemStyle:{color:'rgba(41,182,246,0.6)',borderRadius:[0,4,4,0]},
+            label:{show:false}},
+          {name:'质检成本',type:'bar',barMaxWidth:14,
+            data:topProjs.map(p=>parseFloat(p['质检成本'])||0),
+            itemStyle:{color:function(params){
+              const p=topProjs[params.dataIndex];
+              return (parseFloat(p['质检成本'])||0)>(parseFloat(p['质检预算'])||0)?'#ef5350':'#4caf50';
+            },borderRadius:[0,4,4,0]},
+            label:{show:true,position:'right',color:'#ffd54f',fontSize:9,
+              formatter:p=>{
+                const pp=topProjs[p.dataIndex];
+                const rate=parseFloat(pp['超预算率'])||0;
+                return rate>0?`+${rate.toFixed(0)}%`:'';
+              }}}
+        ]
+      });
+    }
+
+    // 准确率散点
+    const validProjs = projs.filter(p=>parseFloat(p['准确率'])>0);
+    ec('ch_proj_acc', {
+      backgroundColor:'transparent',
+      tooltip:{trigger:'item',backgroundColor:'#1a2744',textStyle:{color:'#e8f0fe'},
+        formatter:p=>`${p.data[3]}<br/>准确率：${p.data[0]}%<br/>质检投入：${p.data[1]}人`},
+      grid:{left:50,right:20,top:30,bottom:50},
+      xAxis:{name:'准确率(%)',nameTextStyle:{color:'#546e7a',fontSize:11},
+        axisLabel:{color:'#546e7a',fontSize:11},min:90,
+        splitLine:{lineStyle:{color:'rgba(255,255,255,.05)'}}},
+      yAxis:{name:'质检投入人数',nameTextStyle:{color:'#546e7a',fontSize:11},
+        axisLabel:{color:'#546e7a',fontSize:11},
+        splitLine:{lineStyle:{color:'rgba(255,255,255,.05)'}}},
+      series:[{type:'scatter',symbolSize:14,
+        data:validProjs.map(p=>[
+          parseFloat(p['准确率'])||0,
+          parseFloat(p['质检投入人数'])||0,
+          parseFloat(p['项目体量'])||0,
+          p['二级项目']||p['一级项目']||''
+        ]),
+        itemStyle:{color:function(p){
+          const acc=p.data[0];
+          return acc>=98?'#4caf50':acc>=95?'#ffa726':'#ef5350';
+        }},
+        label:{show:true,formatter:p=>p.data[3].substring(0,4),color:'#e8f0fe',fontSize:9,position:'top'}}]
+    });
+
+    // 渲染项目列表（按质检人天+难度排序，无数据项目不显示）
+    const pfEl = document.getElementById('projFlow');
+    if(pfEl){
+      const diffRank = {'高':3,'中':2,'低':1};
+      const filteredProjs = projs
+        .filter(p => {
+          const qcMd = parseFloat(p['质检人天'])||0;
+          const budget = parseFloat(p['质检预算'])||0;
+          const cost = parseFloat(p['质检成本'])||0;
+          const qcPpl = parseFloat(p['质检投入人数'])||0;
+          return qcMd > 0 || budget > 0 || cost > 0 || qcPpl > 0;
+        })
+        .sort((a,b) => {
+          const aqc = parseFloat(a['质检人天'])||0;
+          const bqc = parseFloat(b['质检人天'])||0;
+          if(bqc !== aqc) return bqc - aqc;
+          return (diffRank[b['项目难度']]||0) - (diffRank[a['项目难度']]||0);
+        });
+      pfEl.innerHTML = filteredProjs.slice(0,30).map((p,i)=>{
+        const acc = parseFloat(p['准确率'])||0;
+        const status = p['项目达标情况']||'';
+        const qcMd = parseFloat(p['质检人天'])||0;
+        const dlMd = parseFloat(p['交付人天'])||0;
+        const ratio = p['质检交付配比']||'N/A';
+        const budget = parseFloat(p['质检预算'])||0;
+        const cost   = parseFloat(p['质检成本'])||0;
+        const surplus = budget > 0 && cost > 0 ? budget - cost : null;
+        const budgetState = p['预算状态']||'';
+        const budgetColor = budgetState.includes('超预算')?'#ef5350':budgetState.includes('接近')?'#ffa726':'#4caf50';
+        let statusClass = 'status-pending', statusText = '待评';
+        if(status.includes('达标')&&!status.includes('未')) { statusClass='status-ok'; statusText='✅ 达标'; }
+        else if(status.includes('未达标')) { statusClass='status-fail'; statusText='❌ 未达标'; }
+        const fmt = v => v > 0 ? ('¥'+(v/10000).toFixed(1)+'万') : '—';
+        return `<div class="proj-item" style="animation:slideIn .3s ease ${i*0.05}s both;grid-template-columns:1.5fr auto auto auto auto auto auto auto auto auto">
+          <div>
+            <div class="proj-name">${p['二级项目']||p['三级项目']||p['一级项目']||'—'}</div>
+            <div class="proj-sub">${p['一级项目']||''} · ${p['项目难度']||'—'}难度 · ${p['项目优先级']||'—'}</div>
+          </div>
+          <div style="text-align:center">
+            <div style="font-size:10px;color:#546e7a;margin-bottom:2px">质检预算</div>
+            <div style="font-size:12px;font-weight:600;color:#29b6f6">${fmt(budget)}</div>
+          </div>
+          <div style="text-align:center">
+            <div style="font-size:10px;color:#546e7a;margin-bottom:2px">质检成本</div>
+            <div style="font-size:12px;font-weight:600;color:${budgetColor}">${fmt(cost)}</div>
+          </div>
+          <div style="text-align:center">
+            <div style="font-size:10px;color:#546e7a;margin-bottom:2px">盈亏</div>
+            <div style="font-size:12px;font-weight:700;color:${surplus!==null?(surplus>=0?'#4caf50':'#ef5350'):'#546e7a'}">${surplus!==null?('¥'+(surplus/10000).toFixed(1)+'万'):'—'}</div>
+          </div>
+          <div style="text-align:center">
+            <div style="font-size:10px;color:#546e7a;margin-bottom:2px">质检投入人数</div>
+            <div style="font-size:13px;font-weight:600;color:#29b6f6">${parseFloat(p['质检投入人数'])>0?parseFloat(p['质检投入人数']):'—'}</div>
+          </div>
+          <div style="text-align:center">
+            <div style="font-size:10px;color:#546e7a;margin-bottom:2px">质检人天合计</div>
+            <div style="font-size:13px;font-weight:600;color:#ab47bc">${qcMd>0?nf(qcMd,1):'—'}</div>
+          </div>
+          <div style="text-align:center">
+            <div style="font-size:10px;color:#546e7a;margin-bottom:2px">交付人天</div>
+            <div style="font-size:13px;color:#26c6da">${dlMd>0?n(dlMd).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g,','):'—'}</div>
+          </div>
+          <div style="text-align:center">
+            <div style="font-size:10px;color:#546e7a;margin-bottom:2px">质检:交付</div>
+            <div style="font-size:12px;font-weight:600;color:#ffd54f">${ratio}</div>
+          </div>
+          <div class="proj-acc" style="color:${acc>=98?'#4caf50':acc>=95?'#ffa726':'#ef5350'};text-align:center">
+            <div style="font-size:10px;color:#546e7a;margin-bottom:2px">准确率</div>
+            ${acc>0?nf(acc,1)+'%':'—'}
+          </div>
+          <div class="proj-status ${statusClass}">${statusText}</div>
+        </div>`;
+      }).join('');
+    }
+  }
+
+  // 绩效分布
+  if(!m4.no_data){
+    const perfD = m4.perf_dist||{};
+    if(Object.keys(perfD).length>0){
+      const perfColors={'A+':'#ffd54f','A':'#4caf50','B':'#29b6f6','C':'#ffa726','D':'#ef5350','未评':'#546e7a'};
+      ec('ch_perf', {
+        backgroundColor:'transparent',
+        tooltip:{trigger:'item',backgroundColor:'#1a2744',textStyle:{color:'#e8f0fe'}},
+        legend:{bottom:0,textStyle:{color:'#90caf9',fontSize:11}},
+        series:[{type:'pie',radius:'60%',center:['50%','44%'],
+          data:Object.entries(perfD).map(([k,v])=>({value:v,name:k,
+            itemStyle:{color:perfColors[k]||'#546e7a'}})),
+          label:{color:'#e8f0fe',fontSize:12,formatter:'{b} {d}%'}}]
+      });
+    }
+    const lvlCost = m4.level_avg_cost||{};
+    if(Object.keys(lvlCost).length>0){
+      ec('ch_lvl_cost', {
+        backgroundColor:'transparent',
+        tooltip:{trigger:'axis',backgroundColor:'#1a2744',textStyle:{color:'#e8f0fe'},
+          formatter:p=>`${p[0].name}<br/>人均基本工资：${p[0].value!=null?p[0].value.toLocaleString():'—'}元`},
+        grid:{left:60,right:20,top:10,bottom:40},
+        xAxis:{type:'category',data:Object.keys(lvlCost),axisLabel:{color:'#90caf9',fontSize:11}},
+        yAxis:{axisLabel:{color:'#546e7a',fontSize:11,formatter:v=>(v!=null?(v/1000)+'k':'0')},
+          splitLine:{lineStyle:{color:'rgba(255,255,255,.05)'}}},
+        series:[{type:'bar',data:Object.values(lvlCost),barMaxWidth:36,
+          itemStyle:{borderRadius:[6,6,0,0],
+            color:function(p){return ['#5c6bc0','#29b6f6','#4caf50','#ffa726','#ef5350'][p.dataIndex]||'#29b6f6'}},
+          label:{show:true,position:'top',color:'#ffd54f',fontSize:11,
+            formatter:p=>(p.value!=null?(p.value/1000).toFixed(1)+'k':'—')}}]
+      });
+    }
+  }
+}
+
+// ══ 启动 ══════════════════════════════════════════════════
+fetch('/api/analysis')
+  .then(r=>r.json())
+  .then(data=>{
+    if(data.error){ 
+      document.getElementById('mainContent').innerHTML = 
+        `<div class="chart-card"><div class="no-data">⚠️ ${data.error}<br><br><a href="/form">前往上传数据</a></div></div>`;
+      return;
+    }
+    try{ render(data); }
+    catch(e){
+      console.error('render error:', e);
+      document.getElementById('mainContent').innerHTML = 
+        `<div class="chart-card"><div class="no-data">⚠️ 渲染失败：${e.message}<br><pre style="font-size:10px;text-align:left;color:#ff8a65;overflow:auto;max-height:300px">${e.stack||''}</pre></div></div>`;
+    }
+  })
+  .catch(e=>{
+    console.error('fetch error:', e);
+    document.getElementById('mainContent').innerHTML = 
+      `<div class="chart-card"><div class="no-data">⚠️ 加载失败：${e.message}</div></div>`;
+  });
+
+// 滚动进度条
+window.addEventListener('scroll',()=>{
+  const d = document.documentElement;
+  const pct = d.scrollTop/(d.scrollHeight-d.clientHeight)*100;
+  document.getElementById('progressBar').style.width = pct+'%';
+});
+
+// 动画
+const style = document.createElement('style');
+style.textContent = `@keyframes slideIn{from{opacity:0;transform:translateX(-16px)}to{opacity:1;transform:translateX(0)}}`;
+document.head.appendChild(style);
+
+// 即将过期调休名单 - 切换表格/分组视图
+function toggleExpireView() {
+  var t = document.getElementById('expireTableDiv');
+  var b = document.getElementById('expireViewBtn');
+  var g = document.getElementById('expireGrpDiv');
+  if (!t || !b || !g) return;
+  if (t.style.display === 'none') {
+    t.style.display = '';
+    g.style.display = 'none';
+    b.textContent = '切换分组视图';
+  } else {
+    t.style.display = 'none';
+    g.style.display = '';
+    b.textContent = '切换表格视图';
+  }
+}
+</script>
+</body>
+</html>// †† 启动（静态版 - 数据已内嵌） ††††††††††††††††††††††††††††††††††
+const __STATIC_DATA__ = {"month": "2026-02", "prev_month": "2026-03", "proj_month": "2026-02", "generated_at": "2026-03-23 13:43:28", "module1": {"total": 295, "in_service": 290, "join": 7, "leave": 3, "join_rate": 0.0237, "leave_rate": 0.0102, "ziying": 111, "lianying": 143, "yewufang": 36, "group_dist": {"培训管理组": 7, "质量管理1组": 99, "质量管理2组": 81, "质量管理3组": 60, "质量管理3组-甲方": 41}, "group_zy_detail": {"培训管理组": {"自营": 7, "联营": 0, "业务方自管": 0, "合计": 7}, "质量管理1组": {"自营": 46, "联营": 53, "业务方自管": 0, "合计": 99}, "质量管理2组": {"自营": 45, "联营": 36, "业务方自管": 0, "合计": 81}, "质量管理3组": {"自营": 13, "联营": 47, "业务方自管": 0, "合计": 60}, "质量管理3组-甲方": {"自营": 0, "联营": 5, "业务方自管": 36, "合计": 41}}, "leave_detail": [{"姓名": "吕昕", "组": "质量管理2组", "职级": "2-2", "角色": "高级组长", "类型": "自营", "工作地": "天津", "职位": "质量策划", "离职时间": "2026-02-14", "是否骨干": "⚠️ 骨干"}, {"姓名": "翟凤花", "组": "质量管理2组", "职级": "L2", "角色": "员工", "类型": "自营", "工作地": "天津", "职位": "信息质检", "离职时间": "2026-02-28", "是否骨干": "普通"}, {"姓名": "赵鹏辉", "组": "质量管理3组-甲方", "职级": "L2", "角色": "员工", "类型": "自营", "工作地": "成都", "职位": "信息质检", "离职时间": "2026-02-10", "是否骨干": "普通"}], "key_leave_count": 1, "key_leave_names": ["吕昕"], "manager_count": 27, "mgmt_ratio": 0.0931, "mgmt_span": 9.7407, "overview_table": [{"组别": "培训管理组", "在职人数": 7, "占比": "2.4%", "自营": 7, "自营运营族": 6, "自营交付族": 0, "联营": 0, "业务方自管": 0, "自营占比": "100%", "管理人数": 1, "在招需求": "—", "本月入职": 0, "本月离职": 0, "管理比例": "14%", "人才流失风险": "🟢 低"}, {"组别": "质量管理1组", "在职人数": 99, "占比": "34.1%", "自营": 46, "自营运营族": 26, "自营交付族": 20, "联营": 53, "业务方自管": 0, "自营占比": "46%", "管理人数": 11, "在招需求": "—", "本月入职": 5, "本月离职": 0, "管理比例": "11%", "人才流失风险": "🟢 低"}, {"组别": "质量管理2组", "在职人数": 81, "占比": "27.9%", "自营": 45, "自营运营族": 29, "自营交付族": 16, "联营": 36, "业务方自管": 0, "自营占比": "56%", "管理人数": 9, "在招需求": 2, "本月入职": 2, "本月离职": 2, "管理比例": "11%", "人才流失风险": "🟡 中"}, {"组别": "质量管理3组", "在职人数": 60, "占比": "20.7%", "自营": 13, "自营运营族": 4, "自营交付族": 9, "联营": 47, "业务方自管": 0, "自营占比": "22%", "管理人数": 5, "在招需求": "—", "本月入职": 0, "本月离职": 0, "管理比例": "8%", "人才流失风险": "🟢 低"}, {"组别": "质量管理3组-甲方", "在职人数": 41, "占比": "14.1%", "自营": 0, "自营运营族": 0, "自营交付族": 36, "联营": 5, "业务方自管": 36, "自营占比": "0%", "管理人数": 0, "在招需求": "—", "本月入职": 0, "本月离职": 0, "管理比例": "0%", "人才流失风险": "🟢 低"}, {"组别": "合计", "在职人数": 290, "占比": "100%", "自营": 111, "自营运营族": 65, "自营交付族": 81, "联营": 143, "业务方自管": 36, "自营占比": "38%", "管理人数": 27, "在招需求": 2, "本月入职": 7, "本月离职": 3, "管理比例": "9%", "人才流失风险": "—"}], "city_dist": {"天津": 87, "重庆渝北基地": 52, "天津通广基地": 31, "成都": 28, "辽宁大连基地": 20, "重庆": 16, "重庆仙桃基地": 13, "广州番禺基地": 12, "青岛": 9, "天津棉三基地": 9, "未知": 6, "澄迈县": 3, "武汉": 2, "邯郸": 1, "北京": 1}, "prev_total": null, "delta_total": null, "delta_total_pct": "N/A", "prev_group_dist": {}, "prev_group_zy_detail": {}, "conclusions": ["✅ 管理跨度 10:1，处于合理范围内", "✅ 离职率 1.0%，人员稳定性良好", "⚠️ 风险提示：本月 1 名骨干（管理/关键岗位）离职：吕昕，需立即启动替代方案，评估岗位空缺影响", "⚠️ 风险提示：质量管理3组（联营78%） 联营占比超60%，稳定性风险较高，建议优先推进转自营或备岗"], "suggestions": ["【建议1】定期复盘管理跨度，保持在10-15:1的健康范围内，避免因业务扩张导致管理失控", "【建议2】持续关注高潜人才保留，提前准备关键岗位备岗方案，降低突发离职影响", "【建议3】联营占比达49.3%，建议制定联营转自营计划，逐步将核心骨干纳入自营体系，提升组织稳定性"], "monthly_flow": [{"month": "1月", "active": 284, "join": 13, "leave": 3}, {"month": "2月", "active": 290, "join": 7, "leave": 3}, {"month": "3月", "active": 0, "join": 0, "leave": 0}]}, "module2": {"level_dist": {"3-1": 4, "2-3": 1, "2-2": 4, "2-1": 1, "L4": 5, "L3": 26, "高级": 33, "1-3": 17, "1-2": 19, "L2": 48, "资深": 104, "1-1": 18, "L1": 3, "未知": 7}, "ai_dist": {"低能高意高潜": 38, "未列入培养对象": 34, "中能高意高潜": 17, "管理&培训": 11, "独立运维": 8, "新入职未定位": 4}, "ai_empty": 0, "talent_dist": {}, "high_potential": 0, "high_potential_rate": 0, "city_dist": {"天津": 87, "重庆渝北基地": 52, "天津通广基地": 31, "成都": 28, "辽宁大连基地": 20, "重庆": 16, "重庆仙桃基地": 13, "广州番禺基地": 12, "青岛": 9, "天津棉三基地": 9, "未知": 6, "澄迈县": 3, "武汉": 2, "邯郸": 1, "北京": 1}, "zy_dist": {"联营": 143, "自营": 111, "业务方自管": 36}, "prev_level_dist": {}, "conclusions": ["⚠️ 高潜人才占比仅 0.0%，人才储备偏薄，建议加大人才盘点力度"], "suggestions": ["【建议1】建立AI能力档位季度评估机制，每季度更新一次，确保数据反映最新能力状态", "【建议2】设计职级晋升通道图，明确L1→L2→L3的能力要求和晋升周期，避免高职低用或低职高压情况", "【建议3】扩大人才盘点覆盖范围，将高潜人才识别比例提升至15%以上，并为其制定专项发展计划", "【建议4】关注城市结构变化，避免单一城市依赖度过高，适当分散招聘地域，降低区域性用工风险", "【建议5】建立人才流失预警模型，对「待优化」标签人员加强关注，提前制定替换方案"]}, "module3": {"projects": [{"一级项目": "QQ项目", "二级项目": "QQ频道", "三级项目": "QQ频道", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 1705.23, "一线自营人天": 781, "一线联营人天": 924.23, "质检预算": 56416.48, "质检成本": 52076.4, "质检人天": 121.59, "质检投入人数": 7, "交付人天": 1705.23, "质检交付配比": "1:14.02", "质检交付配比_raw": 0.0713, "预算盈亏": 4340.08, "超预算率": -7.69, "预算状态": "🟡 接近上限", "自营联营比": "自营46% / 联营54%"}, {"一级项目": "QQ项目", "二级项目": "QQ空间", "三级项目": "QQ空间", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 416.32, "一线自营人天": 0, "一线联营人天": 416.32, "质检预算": 13364.83, "质检成本": 15525.81, "质检人天": 57.61, "质检投入人数": 8, "交付人天": 416.32, "质检交付配比": "1:7.23", "质检交付配比_raw": 0.1384, "预算盈亏": -2160.97, "超预算率": 16.17, "预算状态": "⚠️ 超预算", "自营联营比": "自营0% / 联营100%"}, {"一级项目": "QQ项目", "二级项目": "QQ群", "三级项目": "QQ群", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 0.0, "一线自营人天": 0, "一线联营人天": 0.0, "质检预算": 0.0, "质检成本": 0.0, "质检人天": 0.0, "质检投入人数": 0, "交付人天": 0.0, "质检交付配比": "N/A", "质检交付配比_raw": 0, "预算盈亏": "", "超预算率": 0, "预算状态": "N/A", "自营联营比": "N/A"}, {"一级项目": "微视", "二级项目": "微视", "三级项目": "微视", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 1282.0, "一线自营人天": 322, "一线联营人天": 960.0, "质检预算": 28773.25, "质检成本": 31856.5, "质检人天": 59.44, "质检投入人数": 4, "交付人天": 1282.0, "质检交付配比": "1:21.57", "质检交付配比_raw": 0.0464, "预算盈亏": -3083.25, "超预算率": 10.72, "预算状态": "⚠️ 超预算", "自营联营比": "自营25% / 联营75%"}, {"一级项目": "微视", "二级项目": "微视-运营", "三级项目": "微视-运营", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 509.0, "一线自营人天": 509, "一线联营人天": 0.0, "质检预算": 29669.75, "质检成本": 12411.55, "质检人天": 59.44, "质检投入人数": 4, "交付人天": 509.0, "质检交付配比": "1:8.56", "质检交付配比_raw": 0.1168, "预算盈亏": 17258.2, "超预算率": -58.17, "预算状态": "🟢 正常", "自营联营比": "自营100% / 联营0%"}, {"一级项目": "腾讯视频", "二级项目": "腾讯视频", "三级项目": "腾讯视频", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 4750.0, "一线自营人天": 3766, "一线联营人天": 984.0, "质检预算": 238109.12, "质检成本": 161331.46, "质检人天": 143.62, "质检投入人数": 12, "交付人天": 4750.0, "质检交付配比": "1:33.07", "质检交付配比_raw": 0.0302, "预算盈亏": 76777.66, "超预算率": -32.24, "预算状态": "🟢 正常", "自营联营比": "自营79% / 联营21%"}, {"一级项目": "企鹅号质量", "二级项目": "企鹅号质量", "三级项目": "企鹅号质量", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 109.0, "一线自营人天": 109, "一线联营人天": 0.0, "质检预算": 4179.02, "质检成本": 1001.92, "质检人天": 1.45, "质检投入人数": 1, "交付人天": 109.0, "质检交付配比": "1:75.17", "质检交付配比_raw": 0.0133, "预算盈亏": 3177.1, "超预算率": -76.03, "预算状态": "🟢 正常", "自营联营比": "自营100% / 联营0%"}, {"一级项目": "腾讯体育", "二级项目": "腾讯体育", "三级项目": "腾讯体育", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 360.0, "一线自营人天": 0, "一线联营人天": 360.0, "质检预算": 8068.23, "质检成本": 8705.78, "质检人天": 8.28, "质检投入人数": 1, "交付人天": 360.0, "质检交付配比": "1:43.48", "质检交付配比_raw": 0.023, "预算盈亏": -637.56, "超预算率": 7.9, "预算状态": "⚠️ 超预算", "自营联营比": "自营0% / 联营100%"}, {"一级项目": "腾讯新闻", "二级项目": "腾讯新闻", "三级项目": "腾讯新闻", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 2845.0, "一线自营人天": 1789, "一线联营人天": 1056.0, "质检预算": 84296.05, "质检成本": 85470.37, "质检人天": 111.2, "质检投入人数": 8, "交付人天": 2845.0, "质检交付配比": "1:25.58", "质检交付配比_raw": 0.0391, "预算盈亏": -1174.31, "超预算率": 1.39, "预算状态": "⚠️ 超预算", "自营联营比": "自营63% / 联营37%"}, {"一级项目": "CSIG-信服线", "二级项目": "信服线-信息流", "三级项目": "信服线-信息流", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 1433.0, "一线自营人天": 353, "一线联营人天": 1080.0, "质检预算": 35759.65, "质检成本": 27546.15, "质检人天": 49.06, "质检投入人数": 3, "交付人天": 1433.0, "质检交付配比": "1:29.21", "质检交付配比_raw": 0.0342, "预算盈亏": 8213.5, "超预算率": -22.97, "预算状态": "🟢 正常", "自营联营比": "自营25% / 联营75%"}, {"一级项目": "生态审核-其他产品", "二级项目": "生态审核-其他产品", "三级项目": "生态-专审-企鹅号生态", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 641.21, "一线自营人天": 0, "一线联营人天": 641.21, "质检预算": 14124.0, "质检成本": 14571.28, "质检人天": 11.78, "质检投入人数": 2, "交付人天": 641.21, "质检交付配比": "1:54.43", "质检交付配比_raw": 0.0184, "预算盈亏": -447.28, "超预算率": 3.17, "预算状态": "⚠️ 超预算", "自营联营比": "自营0% / 联营100%"}, {"一级项目": "生态审核-其他产品", "二级项目": "生态审核-其他产品", "三级项目": "生态-专审-腾讯视频生态", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 244.0, "一线自营人天": 244, "一线联营人天": 0.0, "质检预算": 11286.33, "质检成本": 5458.08, "质检人天": 143.62, "质检投入人数": 12, "交付人天": 244.0, "质检交付配比": "1:1.7", "质检交付配比_raw": 0.5886, "预算盈亏": 5828.25, "超预算率": -51.64, "预算状态": "🟢 正常", "自营联营比": "自营100% / 联营0%"}, {"一级项目": "生态审核-其他产品", "二级项目": "生态审核-其他产品", "三级项目": "生态-专审-腾讯新闻生态", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 92.0, "一线自营人天": 92, "一线联营人天": 0.0, "质检预算": 4554.0, "质检成本": 1022.52, "质检人天": 111.2, "质检投入人数": 8, "交付人天": 92.0, "质检交付配比": "1.21:1", "质检交付配比_raw": 1.2087, "预算盈亏": 3531.48, "超预算率": -77.55, "预算状态": "🟢 正常", "自营联营比": "自营100% / 联营0%"}, {"一级项目": "生态审核-其他产品", "二级项目": "生态审核-其他产品", "三级项目": "生态-专审-信服线生态", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 152.05, "一线自营人天": 0, "一线联营人天": 152.05, "质检预算": 6077.5, "质检成本": 3951.06, "质检人天": 4.95, "质检投入人数": 1, "交付人天": 152.05, "质检交付配比": "1:30.72", "质检交付配比_raw": 0.0326, "预算盈亏": 2126.44, "超预算率": -34.99, "预算状态": "🟢 正常", "自营联营比": "自营0% / 联营100%"}, {"一级项目": "生态审核-社交线", "二级项目": "生态审核-社交线", "三级项目": "社交线生态-腾讯文档", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 51.0, "一线自营人天": 51, "一线联营人天": 0.0, "质检预算": 1765.5, "质检成本": 9472.79, "质检人天": 3.66, "质检投入人数": 2, "交付人天": 51.0, "质检交付配比": "1:13.93", "质检交付配比_raw": 0.0718, "预算盈亏": -7707.29, "超预算率": 436.55, "预算状态": "⚠️ 超预算", "自营联营比": "自营100% / 联营0%"}, {"一级项目": "生态审核-社交线", "二级项目": "生态审核-社交线", "三级项目": "社交线生态-QQ空间基础", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 1625.22, "一线自营人天": 131, "一线联营人天": 1494.22, "质检预算": 39429.97, "质检成本": 34083.79, "质检人天": 57.61, "质检投入人数": 8, "交付人天": 1625.22, "质检交付配比": "1:28.21", "质检交付配比_raw": 0.0354, "预算盈亏": 5346.18, "超预算率": -13.56, "预算状态": "🟢 正常", "自营联营比": "自营8% / 联营92%"}, {"一级项目": "生态审核-社交线", "二级项目": "生态审核-社交线", "三级项目": "社交线生态-QQ频道", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 1809.36, "一线自营人天": 239, "一线联营人天": 1570.36, "质检预算": 45052.64, "质检成本": 33653.82, "质检人天": 121.59, "质检投入人数": 7, "交付人天": 1809.36, "质检交付配比": "1:14.88", "质检交付配比_raw": 0.0672, "预算盈亏": 11398.81, "超预算率": -25.3, "预算状态": "🟢 正常", "自营联营比": "自营13% / 联营87%"}, {"一级项目": "生态审核-社交线", "二级项目": "生态审核-社交线", "三级项目": "社交线生态-QQ基础", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 6532.61, "一线自营人天": 2419, "一线联营人天": 4113.61, "质检预算": 165140.97, "质检成本": 131148.65, "质检人天": 177.95, "质检投入人数": 16, "交付人天": 6532.61, "质检交付配比": "1:36.71", "质检交付配比_raw": 0.0272, "预算盈亏": 33992.32, "超预算率": -20.58, "预算状态": "🟢 正常", "自营联营比": "自营37% / 联营63%"}, {"一级项目": "生态审核-社交线", "二级项目": "生态审核-社交线", "三级项目": "社交线生态-QQ智能体", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 125.0, "一线自营人天": 125, "一线联营人天": 0.0, "质检预算": 2089.18, "质检成本": 1859.03, "质检人天": 2.2, "质检投入人数": 1, "交付人天": 125.0, "质检交付配比": "1:56.82", "质检交付配比_raw": 0.0176, "预算盈亏": 230.15, "超预算率": -11.02, "预算状态": "🟢 正常", "自营联营比": "自营100% / 联营0%"}, {"一级项目": "IEG-内容审核", "二级项目": "IEG-内容审核", "三级项目": "IEG-掌上穿越火线项目社区内容质量审核", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 240.0, "一线自营人天": 0, "一线联营人天": 240.0, "质检预算": 4438.5, "质检成本": 3984.9, "质检人天": 9.13, "质检投入人数": 1, "交付人天": 240.0, "质检交付配比": "1:26.29", "质检交付配比_raw": 0.038, "预算盈亏": 453.6, "超预算率": -10.22, "预算状态": "🟢 正常", "自营联营比": "自营0% / 联营100%"}, {"一级项目": "IEG-内容审核", "二级项目": "IEG-内容审核", "三级项目": "IEG-心悦会员", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 428.23, "一线自营人天": 18, "一线联营人天": 410.23, "质检预算": 4083.88, "质检成本": 14721.6, "质检人天": 28.76, "质检投入人数": 2, "交付人天": 428.23, "质检交付配比": "1:14.89", "质检交付配比_raw": 0.0672, "预算盈亏": -10637.72, "超预算率": 260.48, "预算状态": "⚠️ 超预算", "自营联营比": "自营4% / 联营96%"}, {"一级项目": "IEG-内容审核", "二级项目": "IEG-内容审核", "三级项目": "IEG-K6社区内容打标审核", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 120.0, "一线自营人天": 0, "一线联营人天": 120.0, "质检预算": 2015.75, "质检成本": 1356.7, "质检人天": 3.11, "质检投入人数": 1, "交付人天": 120.0, "质检交付配比": "1:38.59", "质检交付配比_raw": 0.0259, "预算盈亏": 659.05, "超预算率": -32.7, "预算状态": "🟢 正常", "自营联营比": "自营0% / 联营100%"}, {"一级项目": "S1职能线", "二级项目": "S1职能线", "三级项目": "消费者投诉数据标签审核", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 0.0, "一线自营人天": 0, "一线联营人天": 0.0, "质检预算": 685.83, "质检成本": 3918.36, "质检人天": 1.76, "质检投入人数": 1, "交付人天": 0.0, "质检交付配比": "N/A", "质检交付配比_raw": 0, "预算盈亏": -3232.53, "超预算率": 471.33, "预算状态": "⚠️ 超预算", "自营联营比": "N/A"}, {"一级项目": "WXG-开平", "二级项目": "WXG-开平", "三级项目": "公众号账号分级", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 13062.94, "一线自营人天": 127, "一线联营人天": 12935.94, "质检预算": 199361.48, "质检成本": 171849.97, "质检人天": 220.2, "质检投入人数": 14, "交付人天": 13062.94, "质检交付配比": "1:59.32", "质检交付配比_raw": 0.0169, "预算盈亏": 27511.51, "超预算率": -13.8, "预算状态": "🟢 正常", "自营联营比": "自营1% / 联营99%"}, {"一级项目": "WXG-开平", "二级项目": "WXG-开平", "三级项目": "男凝留言评论审核", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 1107.34, "一线自营人天": 0, "一线联营人天": 1107.34, "质检预算": 17487.5, "质检成本": 29638.1, "质检人天": 43.08, "质检投入人数": 5, "交付人天": 1107.34, "质检交付配比": "1:25.7", "质检交付配比_raw": 0.0389, "预算盈亏": -12150.6, "超预算率": 69.48, "预算状态": "⚠️ 超预算", "自营联营比": "自营0% / 联营100%"}, {"一级项目": "WXG-开平", "二级项目": "WXG-开平", "三级项目": "公众号快讯审核", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 397.76, "一线自营人天": 75, "一线联营人天": 322.76, "质检预算": 14606.95, "质检成本": 22362.4, "质检人天": 41.7, "质检投入人数": 3, "交付人天": 397.76, "质检交付配比": "1:9.54", "质检交付配比_raw": 0.1048, "预算盈亏": -7755.46, "超预算率": 53.09, "预算状态": "⚠️ 超预算", "自营联营比": "自营19% / 联营81%"}, {"一级项目": "WXG-开平", "二级项目": "WXG-开平", "三级项目": "开平红包", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 239.0, "一线自营人天": 239, "一线联营人天": 0.0, "质检预算": 26482.12, "质检成本": 36000.91, "质检人天": 35.17, "质检投入人数": 17, "交付人天": 239.0, "质检交付配比": "1:6.8", "质检交付配比_raw": 0.1472, "预算盈亏": -9518.79, "超预算率": 35.94, "预算状态": "⚠️ 超预算", "自营联营比": "自营100% / 联营0%"}, {"一级项目": "WXG-内容审核", "二级项目": "短视频-安全运营", "三级项目": "评论弹幕账号审核追加", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 7548.66, "一线自营人天": 40, "一线联营人天": 7508.66, "质检预算": 149211.2, "质检成本": 164223.83, "质检人天": 218.61, "质检投入人数": 14, "交付人天": 7548.66, "质检交付配比": "1:34.53", "质检交付配比_raw": 0.029, "预算盈亏": -15012.62, "超预算率": 10.06, "预算状态": "⚠️ 超预算", "自营联营比": "自营1% / 联营99%"}, {"一级项目": "WXG-内容审核", "二级项目": "短视频-安全运营", "三级项目": "安全运营-私信黑灰产打击", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 848.0, "一线自营人天": 56, "一线联营人天": 792.0, "质检预算": 22783.32, "质检成本": 13993.02, "质检人天": 19.95, "质检投入人数": 2, "交付人天": 848.0, "质检交付配比": "1:42.51", "质检交付配比_raw": 0.0235, "预算盈亏": 8790.3, "超预算率": -38.58, "预算状态": "🟢 正常", "自营联营比": "自营7% / 联营93%"}, {"一级项目": "WXG-内容审核", "二级项目": "短视频-安全运营", "三级项目": "高热审核", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 1325.89, "一线自营人天": 0, "一线联营人天": 1325.89, "质检预算": 32297.18, "质检成本": 31870.9, "质检人天": 48.09, "质检投入人数": 5, "交付人天": 1325.89, "质检交付配比": "1:27.57", "质检交付配比_raw": 0.0363, "预算盈亏": 426.28, "超预算率": -1.32, "预算状态": "🟡 接近上限", "自营联营比": "自营0% / 联营100%"}, {"一级项目": "WXG-内容审核", "二级项目": "短视频-安全运营", "三级项目": "投流审核", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 672.0, "一线自营人天": 0, "一线联营人天": 672.0, "质检预算": 16643.39, "质检成本": 18575.79, "质检人天": 27.99, "质检投入人数": 4, "交付人天": 672.0, "质检交付配比": "1:24.01", "质检交付配比_raw": 0.0417, "预算盈亏": -1932.4, "超预算率": 11.61, "预算状态": "⚠️ 超预算", "自营联营比": "自营0% / 联营100%"}, {"一级项目": "WXG-内容审核", "二级项目": "短视频-安全运营", "三级项目": "拉黑后审-一项目", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 0.0, "一线自营人天": 0, "一线联营人天": 0.0, "质检预算": 0.0, "质检成本": 0.0, "质检人天": 51.73, "质检投入人数": 6, "交付人天": 0.0, "质检交付配比": "N/A", "质检交付配比_raw": 0, "预算盈亏": "", "超预算率": 0, "预算状态": "N/A", "自营联营比": "N/A"}, {"一级项目": "WXG-内容审核", "二级项目": "短视频-安全运营", "三级项目": "短视频安全运营-仿冒队列-一项目", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 624.0, "一线自营人天": 0, "一线联营人天": 624.0, "质检预算": 14904.08, "质检成本": 12922.6, "质检人天": 22.0, "质检投入人数": 1, "交付人天": 624.0, "质检交付配比": "1:28.36", "质检交付配比_raw": 0.0353, "预算盈亏": 1981.48, "超预算率": -13.29, "预算状态": "🟢 正常", "自营联营比": "自营0% / 联营100%"}, {"一级项目": "WXG-内容审核", "二级项目": "短视频-内容运营", "三级项目": "视频号医疗二确", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 120.0, "一线自营人天": 0, "一线联营人天": 120.0, "质检预算": 3895.9, "质检成本": 15271.77, "质检人天": 24.25, "质检投入人数": 2, "交付人天": 120.0, "质检交付配比": "1:4.95", "质检交付配比_raw": 0.2021, "预算盈亏": -11375.87, "超预算率": 292.0, "预算状态": "⚠️ 超预算", "自营联营比": "自营0% / 联营100%"}, {"一级项目": "WXG-内容审核", "二级项目": "短视频-内容运营", "三级项目": "视频号矩阵号-短期需求", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 273.22, "一线自营人天": 0, "一线联营人天": 273.22, "质检预算": 3493.61, "质检成本": 7702.83, "质检人天": 13.32, "质检投入人数": 3, "交付人天": 273.22, "质检交付配比": "1:20.51", "质检交付配比_raw": 0.0488, "预算盈亏": -4209.22, "超预算率": 120.48, "预算状态": "⚠️ 超预算", "自营联营比": "自营0% / 联营100%"}, {"一级项目": "WXG-内容审核", "二级项目": "短视频-内容运营", "三级项目": "视频号内容板块相似模型标注需求", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 30.96, "一线自营人天": 0, "一线联营人天": 30.96, "质检预算": 674.73, "质检成本": 6009.08, "质检人天": 9.86, "质检投入人数": 3, "交付人天": 30.96, "质检交付配比": "1:3.14", "质检交付配比_raw": 0.3185, "预算盈亏": -5334.35, "超预算率": 790.59, "预算状态": "⚠️ 超预算", "自营联营比": "自营0% / 联营100%"}, {"一级项目": "WXG-内容审核", "二级项目": "直播-直播安全", "三级项目": "引流/投放订单审核", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 1104.0, "一线自营人天": 0, "一线联营人天": 1104.0, "质检预算": 33759.39, "质检成本": 37996.59, "质检人天": 46.13, "质检投入人数": 5, "交付人天": 1104.0, "质检交付配比": "1:23.93", "质检交付配比_raw": 0.0418, "预算盈亏": -4237.2, "超预算率": 12.55, "预算状态": "⚠️ 超预算", "自营联营比": "自营0% / 联营100%"}, {"一级项目": "WXG-内容审核", "二级项目": "短视频-内容运营", "三级项目": "听一听音乐", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 264.0, "一线自营人天": 0, "一线联营人天": 264.0, "质检预算": 6535.83, "质检成本": 4159.9, "质检人天": 8.23, "质检投入人数": 1, "交付人天": 264.0, "质检交付配比": "1:32.08", "质检交付配比_raw": 0.0312, "预算盈亏": 2375.93, "超预算率": -36.35, "预算状态": "🟢 正常", "自营联营比": "自营0% / 联营100%"}, {"一级项目": "WXG-内容审核", "二级项目": "直播-直播运营", "三级项目": "视频号直播红点审核需求", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 1300.0, "一线自营人天": 196, "一线联营人天": 1104.0, "质检预算": 38713.05, "质检成本": 44155.84, "质检人天": 62.3, "质检投入人数": 4, "交付人天": 1300.0, "质检交付配比": "1:20.87", "质检交付配比_raw": 0.0479, "预算盈亏": -5442.79, "超预算率": 14.06, "预算状态": "⚠️ 超预算", "自营联营比": "自营15% / 联营85%"}, {"一级项目": "WXG-内容审核", "二级项目": "直播-直播运营", "三级项目": "视频号直播红点质检队列需求", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 624.0, "一线自营人天": 0, "一线联营人天": 624.0, "质检预算": 14830.23, "质检成本": 0.0, "质检人天": 0.0, "质检投入人数": 0, "交付人天": 624.0, "质检交付配比": "数据补录中", "质检交付配比_raw": 0, "预算盈亏": "", "超预算率": 0, "预算状态": "数据录入中", "自营联营比": "自营0% / 联营100%"}, {"一级项目": "WXG-内容审核", "二级项目": "短视频-内容运营", "三级项目": "视频号合集专项", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 264.0, "一线自营人天": 0, "一线联营人天": 264.0, "质检预算": 5924.88, "质检成本": 1253.53, "质检人天": 0.8, "质检投入人数": 1, "交付人天": 264.0, "质检交付配比": "1:330.0", "质检交付配比_raw": 0.003, "预算盈亏": 4671.34, "超预算率": -78.84, "预算状态": "🟢 正常", "自营联营比": "自营0% / 联营100%"}, {"一级项目": "WXG-内容审核", "二级项目": "短视频-安全运营", "三级项目": "聚类同质化一审-四项目", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 0.0, "一线自营人天": 0, "一线联营人天": 0.0, "质检预算": 0.0, "质检成本": 0.0, "质检人天": 0.0, "质检投入人数": 0, "交付人天": 0.0, "质检交付配比": "N/A", "质检交付配比_raw": 0, "预算盈亏": "", "超预算率": 0, "预算状态": "N/A", "自营联营比": "N/A"}, {"一级项目": "WXG-内容审核", "二级项目": "短视频-安全运营", "三级项目": "聚类同质化二确-一项目", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 0.0, "一线自营人天": 0, "一线联营人天": 0.0, "质检预算": 0.0, "质检成本": 0.0, "质检人天": 0.0, "质检投入人数": 0, "交付人天": 0.0, "质检交付配比": "N/A", "质检交付配比_raw": 0, "预算盈亏": "", "超预算率": 0, "预算状态": "N/A", "自营联营比": "N/A"}, {"一级项目": "WXG-内容审核", "二级项目": "短视频-安全运营", "三级项目": "短视频-图文通用审核", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 287.0, "一线自营人天": 287, "一线联营人天": 0.0, "质检预算": 13673.93, "质检成本": 1465.4, "质检人天": 1.35, "质检投入人数": 1, "交付人天": 287.0, "质检交付配比": "1:212.59", "质检交付配比_raw": 0.0047, "预算盈亏": 12208.53, "超预算率": -89.28, "预算状态": "🟢 正常", "自营联营比": "自营100% / 联营0%"}, {"一级项目": "WXG-内容审核", "二级项目": "短视频-内容运营", "三级项目": "内容运营申诉审核", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 780.0, "一线自营人天": 780, "一线联营人天": 0.0, "质检预算": 35891.24, "质检成本": 0.0, "质检人天": 0.0, "质检投入人数": 0, "交付人天": 780.0, "质检交付配比": "数据补录中", "质检交付配比_raw": 0, "预算盈亏": "", "超预算率": 0, "预算状态": "数据录入中", "自营联营比": "自营100% / 联营0%"}, {"一级项目": "WXG-内容审核", "二级项目": "短视频-安全运营", "三级项目": "安全运营申诉审核", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 988.0, "一线自营人天": 988, "一线联营人天": 0.0, "质检预算": 46335.39, "质检成本": 7200.9, "质检人天": 10.33, "质检投入人数": 1, "交付人天": 988.0, "质检交付配比": "1:95.64", "质检交付配比_raw": 0.0105, "预算盈亏": 39134.49, "超预算率": -84.46, "预算状态": "🟢 正常", "自营联营比": "自营100% / 联营0%"}, {"一级项目": "WXG-内容审核", "二级项目": "短视频-安全运营", "三级项目": "方言内容审核", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 288.0, "一线自营人天": 0, "一线联营人天": 288.0, "质检预算": 9974.22, "质检成本": 16462.3, "质检人天": 32.0, "质检投入人数": 2, "交付人天": 288.0, "质检交付配比": "1:9.0", "质检交付配比_raw": 0.1111, "预算盈亏": -6488.08, "超预算率": 65.05, "预算状态": "⚠️ 超预算", "自营联营比": "自营0% / 联营100%"}, {"一级项目": "WXG-内容审核", "二级项目": "短视频-内容运营", "三级项目": "视频号短视频红点项目", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 532.0, "一线自营人天": 532, "一线联营人天": 0.0, "质检预算": 27856.81, "质检成本": 32304.48, "质检人天": 31.86, "质检投入人数": 4, "交付人天": 532.0, "质检交付配比": "1:16.7", "质检交付配比_raw": 0.0599, "预算盈亏": -4447.66, "超预算率": 15.97, "预算状态": "⚠️ 超预算", "自营联营比": "自营100% / 联营0%"}, {"一级项目": "WXG-内容审核", "二级项目": "短视频-内容运营", "三级项目": "视频号红点中长视频审核", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 217.0, "一线自营人天": 217, "一线联营人天": 0.0, "质检预算": 11126.94, "质检成本": 0.0, "质检人天": 28.96, "质检投入人数": 4, "交付人天": 217.0, "质检交付配比": "1:7.49", "质检交付配比_raw": 0.1335, "预算盈亏": "", "超预算率": 0, "预算状态": "数据录入中", "自营联营比": "自营100% / 联营0%"}, {"一级项目": "WXG-内容审核", "二级项目": "短视频-安全运营", "三级项目": "视频号谣言审核", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 1416.0, "一线自营人天": 0, "一线联营人天": 1416.0, "质检预算": 37925.73, "质检成本": 46914.54, "质检人天": 60.11, "质检投入人数": 6, "交付人天": 1416.0, "质检交付配比": "1:23.56", "质检交付配比_raw": 0.0425, "预算盈亏": -8988.81, "超预算率": 23.7, "预算状态": "⚠️ 超预算", "自营联营比": "自营0% / 联营100%"}, {"一级项目": "WXG-内容审核", "二级项目": "直播-直播安全", "三级项目": "视频号直播安全审核", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 1397.0, "一线自营人天": 197, "一线联营人天": 1200.0, "质检预算": 39347.13, "质检成本": 58136.41, "质检人天": 68.64, "质检投入人数": 6, "交付人天": 1397.0, "质检交付配比": "1:20.35", "质检交付配比_raw": 0.0491, "预算盈亏": -18789.27, "超预算率": 47.75, "预算状态": "⚠️ 超预算", "自营联营比": "自营14% / 联营86%"}, {"一级项目": "WXG-内容审核", "二级项目": "短视频-安全运营", "三级项目": "视频号投诉队列审核", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 1322.0, "一线自营人天": 794, "一线联营人天": 528.0, "质检预算": 56008.21, "质检成本": 60169.18, "质检人天": 79.75, "质检投入人数": 8, "交付人天": 1322.0, "质检交付配比": "1:16.58", "质检交付配比_raw": 0.0603, "预算盈亏": -4160.97, "超预算率": 7.43, "预算状态": "⚠️ 超预算", "自营联营比": "自营60% / 联营40%"}, {"一级项目": "WXG-内容审核", "二级项目": "短视频-内容运营", "三级项目": "青少年专项审核", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 480.0, "一线自营人天": 0, "一线联营人天": 480.0, "质检预算": 11253.0, "质检成本": 14517.16, "质检人天": 19.96, "质检投入人数": 3, "交付人天": 480.0, "质检交付配比": "1:24.05", "质检交付配比_raw": 0.0416, "预算盈亏": -3264.16, "超预算率": 29.01, "预算状态": "⚠️ 超预算", "自营联营比": "自营0% / 联营100%"}, {"一级项目": "WXG-内容审核", "二级项目": "短视频-内容运营", "三级项目": "视频号真人分类审核", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 456.0, "一线自营人天": 0, "一线联营人天": 456.0, "质检预算": 11409.86, "质检成本": 14517.16, "质检人天": 19.96, "质检投入人数": 3, "交付人天": 456.0, "质检交付配比": "1:22.85", "质检交付配比_raw": 0.0438, "预算盈亏": -3107.3, "超预算率": 27.23, "预算状态": "⚠️ 超预算", "自营联营比": "自营0% / 联营100%"}, {"一级项目": "WXG-内容审核", "二级项目": "短视频-内容运营", "三级项目": "视频号创作成本审核需求", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 192.0, "一线自营人天": 0, "一线联营人天": 192.0, "质检预算": 3148.75, "质检成本": 14035.55, "质检人天": 20.0, "质检投入人数": 1, "交付人天": 192.0, "质检交付配比": "1:9.6", "质检交付配比_raw": 0.1042, "预算盈亏": -10886.8, "超预算率": 345.75, "预算状态": "⚠️ 超预算", "自营联营比": "自营0% / 联营100%"}, {"一级项目": "WXG-内容审核", "二级项目": "短视频-内容运营", "三级项目": "内容运营-二确业务", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 3888.0, "一线自营人天": 0, "一线联营人天": 3888.0, "质检预算": 122499.27, "质检成本": 140549.02, "质检人天": 164.3, "质检投入人数": 13, "交付人天": 3888.0, "质检交付配比": "1:23.66", "质检交付配比_raw": 0.0423, "预算盈亏": -18049.74, "超预算率": 14.73, "预算状态": "⚠️ 超预算", "自营联营比": "自营0% / 联营100%"}, {"一级项目": "WXG-内容审核", "二级项目": "短视频-安全运营", "三级项目": "引流审核", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 648.0, "一线自营人天": 0, "一线联营人天": 648.0, "质检预算": 18240.1, "质检成本": 28716.65, "质检人天": 35.46, "质检投入人数": 4, "交付人天": 648.0, "质检交付配比": "1:18.27", "质检交付配比_raw": 0.0547, "预算盈亏": -10476.56, "超预算率": 57.44, "预算状态": "⚠️ 超预算", "自营联营比": "自营0% / 联营100%"}, {"一级项目": "WXG-内容审核", "二级项目": "短视频-内容运营", "三级项目": "视频号加热评估需求", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 32.0, "一线自营人天": 32, "一线联营人天": 0.0, "质检预算": 1349.33, "质检成本": 2445.99, "质检人天": 2.7, "质检投入人数": 1, "交付人天": 32.0, "质检交付配比": "1:11.85", "质检交付配比_raw": 0.0844, "预算盈亏": -1096.66, "超预算率": 81.27, "预算状态": "⚠️ 超预算", "自营联营比": "自营100% / 联营0%"}, {"一级项目": "WXG-内容审核", "二级项目": "短视频-安全运营", "三级项目": "大盘动态/账号二确审核", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 4831.0, "一线自营人天": 727, "一线联营人天": 4104.0, "质检预算": 164145.26, "质检成本": 141493.01, "质检人天": 170.99, "质检投入人数": 11, "交付人天": 4831.0, "质检交付配比": "1:28.25", "质检交付配比_raw": 0.0354, "预算盈亏": 22652.25, "超预算率": -13.8, "预算状态": "🟢 正常", "自营联营比": "自营15% / 联营85%"}, {"一级项目": "WXG-内容审核", "二级项目": "短视频-内容运营", "三级项目": "长视频审核", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 696.0, "一线自营人天": 0, "一线联营人天": 696.0, "质检预算": 12645.42, "质检成本": 21899.45, "质检人天": 28.96, "质检投入人数": 4, "交付人天": 696.0, "质检交付配比": "1:24.03", "质检交付配比_raw": 0.0416, "预算盈亏": -9254.03, "超预算率": 73.18, "预算状态": "⚠️ 超预算", "自营联营比": "自营0% / 联营100%"}, {"一级项目": "WXG-内容审核", "二级项目": "直播-直播安全", "三级项目": "视频号直播标注需求", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 120.0, "一线自营人天": 0, "一线联营人天": 120.0, "质检预算": 2869.49, "质检成本": 0.0, "质检人天": 0.0, "质检投入人数": 0, "交付人天": 120.0, "质检交付配比": "数据补录中", "质检交付配比_raw": 0, "预算盈亏": "", "超预算率": 0, "预算状态": "数据录入中", "自营联营比": "自营0% / 联营100%"}, {"一级项目": "WXG-内容审核", "二级项目": "直播-直播安全", "三级项目": "视频号直播文本标注需求", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 592.26, "一线自营人天": 0, "一线联营人天": 592.26, "质检预算": 9576.42, "质检成本": 33611.27, "质检人天": 43.2, "质检投入人数": 3, "交付人天": 592.26, "质检交付配比": "1:13.71", "质检交付配比_raw": 0.0729, "预算盈亏": -24034.85, "超预算率": 250.98, "预算状态": "⚠️ 超预算", "自营联营比": "自营0% / 联营100%"}, {"一级项目": "WXG-内容审核", "二级项目": "短视频-内容运营", "三级项目": "内容运营-客服", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 120.0, "一线自营人天": 120, "一线联营人天": 0.0, "质检预算": 5648.12, "质检成本": 3086.1, "质检人天": 4.43, "质检投入人数": 1, "交付人天": 120.0, "质检交付配比": "1:27.09", "质检交付配比_raw": 0.0369, "预算盈亏": 2562.02, "超预算率": -45.36, "预算状态": "🟢 正常", "自营联营比": "自营100% / 联营0%"}, {"一级项目": "WXG-内容审核", "二级项目": "短视频-内容运营", "三级项目": "账号质量评估", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 353.0, "一线自营人天": 257, "一线联营人天": 96.0, "质检预算": 3289.0, "质检成本": 9569.26, "质检人天": 11.6, "质检投入人数": 3, "交付人天": 353.0, "质检交付配比": "1:30.43", "质检交付配比_raw": 0.0329, "预算盈亏": -6280.26, "超预算率": 190.95, "预算状态": "⚠️ 超预算", "自营联营比": "自营73% / 联营27%"}, {"一级项目": "WXG-内容审核", "二级项目": "短视频-内容运营", "三级项目": "权益关闭二确", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 480.0, "一线自营人天": 0, "一线联营人天": 480.0, "质检预算": 14800.5, "质检成本": 17985.97, "质检人天": 22.48, "质检投入人数": 4, "交付人天": 480.0, "质检交付配比": "1:21.35", "质检交付配比_raw": 0.0468, "预算盈亏": -3185.47, "超预算率": 21.52, "预算状态": "⚠️ 超预算", "自营联营比": "自营0% / 联营100%"}, {"一级项目": "WXG-内容审核", "二级项目": "短视频-内容运营", "三级项目": "高热和声明全量二确", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 744.0, "一线自营人天": 0, "一线联营人天": 744.0, "质检预算": 18243.5, "质检成本": 23722.1, "质检人天": 33.65, "质检投入人数": 3, "交付人天": 744.0, "质检交付配比": "1:22.11", "质检交付配比_raw": 0.0452, "预算盈亏": -5478.6, "超预算率": 30.03, "预算状态": "⚠️ 超预算", "自营联营比": "自营0% / 联营100%"}, {"一级项目": "WXG-内容审核", "二级项目": "直播-直播运营", "三级项目": "直播运营热点业务", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 1056.0, "一线自营人天": 0, "一线联营人天": 1056.0, "质检预算": 25326.85, "质检成本": 24771.29, "质检人天": 32.0, "质检投入人数": 2, "交付人天": 1056.0, "质检交付配比": "1:33.0", "质检交付配比_raw": 0.0303, "预算盈亏": 555.55, "超预算率": -2.19, "预算状态": "🟡 接近上限", "自营联营比": "自营0% / 联营100%"}, {"一级项目": "WXG-内容审核", "二级项目": "短视频-内容运营", "三级项目": "视频号媒体队列改造", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 139.0, "一线自营人天": 139, "一线联营人天": 0.0, "质检预算": 4632.68, "质检成本": 1253.53, "质检人天": 0.8, "质检投入人数": 1, "交付人天": 139.0, "质检交付配比": "1:173.75", "质检交付配比_raw": 0.0058, "预算盈亏": 3379.15, "超预算率": -72.94, "预算状态": "🟢 正常", "自营联营比": "自营100% / 联营0%"}, {"一级项目": "WXG-开平", "二级项目": "WXG-开平", "三级项目": "微信公众号留言图片审核", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 1128.0, "一线自营人天": 0, "一线联营人天": 1128.0, "质检预算": 13857.9, "质检成本": 37383.9, "质检人天": 55.14, "质检投入人数": 6, "交付人天": 1128.0, "质检交付配比": "1:20.46", "质检交付配比_raw": 0.0489, "预算盈亏": -23526.0, "超预算率": 169.77, "预算状态": "⚠️ 超预算", "自营联营比": "自营0% / 联营100%"}, {"一级项目": "WXG-开平", "二级项目": "WXG-开平", "三级项目": "微信公众号图片流审核需求", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 2432.45, "一线自营人天": 0, "一线联营人天": 2432.45, "质检预算": 23266.09, "质检成本": 62114.7, "质检人天": 72.43, "质检投入人数": 6, "交付人天": 2432.45, "质检交付配比": "1:33.58", "质检交付配比_raw": 0.0298, "预算盈亏": -38848.61, "超预算率": 166.98, "预算状态": "⚠️ 超预算", "自营联营比": "自营0% / 联营100%"}, {"一级项目": "WXG-开平", "二级项目": "WXG-开平", "三级项目": "开平留言申诉审核", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 0.0, "一线自营人天": 0, "一线联营人天": 0.0, "质检预算": 437.25, "质检成本": 0.0, "质检人天": 0.0, "质检投入人数": 0, "交付人天": 0.0, "质检交付配比": "N/A", "质检交付配比_raw": 0, "预算盈亏": "", "超预算率": 0, "预算状态": "数据录入中", "自营联营比": "N/A"}, {"一级项目": "WXG-开平", "二级项目": "WXG-开平", "三级项目": "开平UGC内容分级审核需求", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 100.0, "一线自营人天": 100, "一线联营人天": 0.0, "质检预算": 3056.49, "质检成本": 6947.94, "质检人天": 11.25, "质检投入人数": 1, "交付人天": 100.0, "质检交付配比": "1:8.89", "质检交付配比_raw": 0.1125, "预算盈亏": -3891.45, "超预算率": 127.32, "预算状态": "⚠️ 超预算", "自营联营比": "自营100% / 联营0%"}, {"一级项目": "WXG-内容审核", "二级项目": "短视频-安全运营", "三级项目": "投诉队列审核（1030）&灾备审核", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 2764.49, "一线自营人天": 0, "一线联营人天": 2764.49, "质检预算": 62715.19, "质检成本": 57603.25, "质检人天": 70.97, "质检投入人数": 8, "交付人天": 2764.49, "质检交付配比": "1:38.95", "质检交付配比_raw": 0.0257, "预算盈亏": 5111.94, "超预算率": -8.15, "预算状态": "🟡 接近上限", "自营联营比": "自营0% / 联营100%"}, {"一级项目": "WXG-内容审核", "二级项目": "短视频-安全运营", "三级项目": "争议内容反馈审核", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 375.55, "一线自营人天": 0, "一线联营人天": 375.55, "质检预算": 8297.67, "质检成本": 4754.2, "质检人天": 9.4, "质检投入人数": 1, "交付人天": 375.55, "质检交付配比": "1:39.95", "质检交付配比_raw": 0.025, "预算盈亏": 3543.47, "超预算率": -42.7, "预算状态": "🟢 正常", "自营联营比": "自营0% / 联营100%"}, {"一级项目": "WXG-开平", "二级项目": "WXG-开平", "三级项目": "开平poi&tag-item 审核需求&重要消息", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 283.51, "一线自营人天": 0, "一线联营人天": 283.51, "质检预算": 6762.32, "质检成本": 2315.99, "质检人天": 3.75, "质检投入人数": 1, "交付人天": 283.51, "质检交付配比": "1:75.6", "质检交付配比_raw": 0.0132, "预算盈亏": 4446.33, "超预算率": -65.75, "预算状态": "🟢 正常", "自营联营比": "自营0% / 联营100%"}, {"一级项目": "WXG-开平", "二级项目": "WXG-开平", "三级项目": "公众号文章分级标注-四项目", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 2320.6, "一线自营人天": 0, "一线联营人天": 2320.6, "质检预算": 45343.97, "质检成本": 56489.71, "质检人天": 86.97, "质检投入人数": 8, "交付人天": 2320.6, "质检交付配比": "1:26.68", "质检交付配比_raw": 0.0375, "预算盈亏": -11145.74, "超预算率": 24.58, "预算状态": "⚠️ 超预算", "自营联营比": "自营0% / 联营100%"}, {"一级项目": "WXG-开平", "二级项目": "WXG-开平", "三级项目": "开平春节短期需求", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 1002.42, "一线自营人天": 0, "一线联营人天": 1002.42, "质检预算": 15947.2, "质检成本": 10187.35, "质检人天": 20.42, "质检投入人数": 3, "交付人天": 1002.42, "质检交付配比": "1:49.09", "质检交付配比_raw": 0.0204, "预算盈亏": 5759.85, "超预算率": -36.12, "预算状态": "🟢 正常", "自营联营比": "自营0% / 联营100%"}, {"一级项目": "WXG-开平", "二级项目": "WXG-开平", "三级项目": "开平文章时效性审核需求", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 264.0, "一线自营人天": 0, "一线联营人天": 264.0, "质检预算": 3037.74, "质检成本": 7317.53, "质检人天": 12.08, "质检投入人数": 2, "交付人天": 264.0, "质检交付配比": "1:21.85", "质检交付配比_raw": 0.0458, "预算盈亏": -4279.78, "超预算率": 140.89, "预算状态": "⚠️ 超预算", "自营联营比": "自营0% / 联营100%"}, {"一级项目": "WXG-开平", "二级项目": "WXG-开平", "三级项目": "体感风向标审核", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 504.0, "一线自营人天": 0, "一线联营人天": 504.0, "质检预算": 11335.5, "质检成本": 9555.6, "质检人天": 16.79, "质检投入人数": 2, "交付人天": 504.0, "质检交付配比": "1:30.02", "质检交付配比_raw": 0.0333, "预算盈亏": 1779.9, "超预算率": -15.7, "预算状态": "🟢 正常", "自营联营比": "自营0% / 联营100%"}, {"一级项目": "WXG-开平", "二级项目": "WXG-开平", "三级项目": "留言账号分级分类审核", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 432.0, "一线自营人天": 0, "一线联营人天": 432.0, "质检预算": 9482.24, "质检成本": 5283.0, "质检人天": 10.01, "质检投入人数": 1, "交付人天": 432.0, "质检交付配比": "1:43.16", "质检交付配比_raw": 0.0232, "预算盈亏": 4199.24, "超预算率": -44.29, "预算状态": "🟢 正常", "自营联营比": "自营0% / 联营100%"}, {"一级项目": "WXG-运营平台", "二级项目": "WXG-运营平台", "三级项目": "UGC红包常态化审核25年", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 68.0, "一线自营人天": 68, "一线联营人天": 0.0, "质检预算": 0.0, "质检成本": 13378.62, "质检人天": 12.49, "质检投入人数": 2, "交付人天": 68.0, "质检交付配比": "1:5.44", "质检交付配比_raw": 0.1837, "预算盈亏": "", "超预算率": 0, "预算状态": "N/A", "自营联营比": "自营100% / 联营0%"}, {"一级项目": "WXG-运营平台", "二级项目": "WXG-运营平台", "三级项目": "UGC红包审核-26年春节专项", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 15432.0, "一线自营人天": 0, "一线联营人天": 15432.0, "质检预算": 101079.71, "质检成本": 52690.06, "质检人天": 65.94, "质检投入人数": 10, "交付人天": 15432.0, "质检交付配比": "1:234.03", "质检交付配比_raw": 0.0043, "预算盈亏": 48389.65, "超预算率": -47.87, "预算状态": "🟢 正常", "自营联营比": "自营0% / 联营100%"}, {"一级项目": "WXG-支付", "二级项目": "WXG-支付", "三级项目": "护照信息审核-26年春节专项", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 2080.0, "一线自营人天": 40, "一线联营人天": 2040.0, "质检预算": 41515.02, "质检成本": 19951.02, "质检人天": 21.85, "质检投入人数": 3, "交付人天": 2080.0, "质检交付配比": "1:95.19", "质检交付配比_raw": 0.0105, "预算盈亏": 21564.0, "超预算率": -51.94, "预算状态": "🟢 正常", "自营联营比": "自营2% / 联营98%"}, {"一级项目": "WXG-支付", "二级项目": "WXG-支付", "三级项目": "商户入驻审核", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 81.0, "一线自营人天": 81, "一线联营人天": 0.0, "质检预算": 2586.31, "质检成本": 0.0, "质检人天": 0.0, "质检投入人数": 0, "交付人天": 81.0, "质检交付配比": "数据补录中", "质检交付配比_raw": 0, "预算盈亏": "", "超预算率": 0, "预算状态": "数据录入中", "自营联营比": "自营100% / 联营0%"}, {"一级项目": "WXG-支付", "二级项目": "WXG-支付", "三级项目": "商户停滞交易审核", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 41.39, "一线自营人天": 0, "一线联营人天": 41.39, "质检预算": 880.56, "质检成本": 2235.88, "质检人天": 3.8, "质检投入人数": 1, "交付人天": 41.39, "质检交付配比": "1:10.89", "质检交付配比_raw": 0.0918, "预算盈亏": -1355.32, "超预算率": 153.92, "预算状态": "⚠️ 超预算", "自营联营比": "自营0% / 联营100%"}, {"一级项目": "WXG-支付", "二级项目": "WXG-支付", "三级项目": "小程序经营场景审核", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 2.13, "一线自营人天": 0, "一线联营人天": 2.13, "质检预算": 35.07, "质检成本": 0.0, "质检人天": 0.0, "质检投入人数": 0, "交付人天": 2.13, "质检交付配比": "数据补录中", "质检交付配比_raw": 0, "预算盈亏": "", "超预算率": 0, "预算状态": "数据录入中", "自营联营比": "自营0% / 联营100%"}, {"一级项目": "WXG-支付", "二级项目": "WXG-支付", "三级项目": "商户入驻-抖音-26年H1", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 0.0, "一线自营人天": 0, "一线联营人天": 0.0, "质检预算": 0.0, "质检成本": 0.0, "质检人天": 0.0, "质检投入人数": 0, "交付人天": 0.0, "质检交付配比": "N/A", "质检交付配比_raw": 0, "预算盈亏": "", "超预算率": 0, "预算状态": "N/A", "自营联营比": "N/A"}, {"一级项目": "WXG-支付", "二级项目": "WXG-支付", "三级项目": "APP场景审核", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 0.08, "一线自营人天": 0, "一线联营人天": 0.08, "质检预算": 4.91, "质检成本": 0.0, "质检人天": 0.0, "质检投入人数": 0, "交付人天": 0.08, "质检交付配比": "数据补录中", "质检交付配比_raw": 0, "预算盈亏": "", "超预算率": 0, "预算状态": "数据录入中", "自营联营比": "自营0% / 联营100%"}, {"一级项目": "WXG-支付", "二级项目": "WXG-支付", "三级项目": "微信支付巡检", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 52.46, "一线自营人天": 0, "一线联营人天": 52.46, "质检预算": 2032.31, "质检成本": 3353.81, "质检人天": 0.0, "质检投入人数": 0, "交付人天": 52.46, "质检交付配比": "数据补录中", "质检交付配比_raw": 0, "预算盈亏": -1321.5, "超预算率": 65.02, "预算状态": "⚠️ 超预算", "自营联营比": "自营0% / 联营100%"}, {"一级项目": "WXG-支付", "二级项目": "CDG-支付", "三级项目": "fit二清整改", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 211.0, "一线自营人天": 211, "一线联营人天": 0.0, "质检预算": 6428.64, "质检成本": 6130.06, "质检人天": 7.94, "质检投入人数": 2, "交付人天": 211.0, "质检交付配比": "1:26.57", "质检交付配比_raw": 0.0376, "预算盈亏": 298.58, "超预算率": -4.64, "预算状态": "🟡 接近上限", "自营联营比": "自营100% / 联营0%"}, {"一级项目": "WXG-支付", "二级项目": "WXG-支付", "三级项目": "身份证ps-通航", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 75.52, "一线自营人天": 0, "一线联营人天": 75.52, "质检预算": 3191.9, "质检成本": 5991.81, "质检人天": 32.48, "质检投入人数": 5, "交付人天": 75.52, "质检交付配比": "1:2.33", "质检交付配比_raw": 0.4301, "预算盈亏": -2799.91, "超预算率": 87.72, "预算状态": "⚠️ 超预算", "自营联营比": "自营0% / 联营100%"}, {"一级项目": "WXG-支付", "二级项目": "WXG-支付", "三级项目": "非身份证ps-通航", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 788.48, "一线自营人天": 0, "一线联营人天": 788.48, "质检预算": 21660.97, "质检成本": 20716.56, "质检人天": 32.48, "质检投入人数": 5, "交付人天": 788.48, "质检交付配比": "1:24.28", "质检交付配比_raw": 0.0412, "预算盈亏": 944.41, "超预算率": -4.36, "预算状态": "🟡 接近上限", "自营联营比": "自营0% / 联营100%"}, {"一级项目": "WXG-内容审核", "二级项目": "短视频-内容运营", "三级项目": "账号质量评估-质检", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 0.0, "一线自营人天": 0, "一线联营人天": 0.0, "质检预算": 13885.43, "质检成本": 0.0, "质检人天": 11.6, "质检投入人数": 3, "交付人天": 0.0, "质检交付配比": "N/A", "质检交付配比_raw": 0, "预算盈亏": "", "超预算率": 0, "预算状态": "数据录入中", "自营联营比": "N/A"}, {"一级项目": "WXG-内容审核", "二级项目": "短视频-内容运营", "三级项目": "账号质量质检", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 0.0, "一线自营人天": 0, "一线联营人天": 0.0, "质检预算": 0.0, "质检成本": 0.0, "质检人天": 0.0, "质检投入人数": 0, "交付人天": 0.0, "质检交付配比": "N/A", "质检交付配比_raw": 0, "预算盈亏": "", "超预算率": 0, "预算状态": "N/A", "自营联营比": "N/A"}, {"一级项目": "WXG-内容审核", "二级项目": "直播-直播运营", "三级项目": "视频号机审标签审核", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 216.0, "一线自营人天": 0, "一线联营人天": 216.0, "质检预算": 4350.37, "质检成本": 7396.37, "质检人天": 10.32, "质检投入人数": 2, "交付人天": 216.0, "质检交付配比": "1:20.93", "质检交付配比_raw": 0.0478, "预算盈亏": -3046.01, "超预算率": 70.02, "预算状态": "⚠️ 超预算", "自营联营比": "自营0% / 联营100%"}, {"一级项目": "WXG-内容审核", "二级项目": "直播-直播运营", "三级项目": "视频号录播审核", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 192.0, "一线自营人天": 0, "一线联营人天": 192.0, "质检预算": 5132.81, "质检成本": 5745.29, "质检人天": 7.35, "质检投入人数": 2, "交付人天": 192.0, "质检交付配比": "1:26.12", "质检交付配比_raw": 0.0383, "预算盈亏": -612.48, "超预算率": 11.93, "预算状态": "⚠️ 超预算", "自营联营比": "自营0% / 联营100%"}, {"一级项目": "WXG-内容审核", "二级项目": "短视频-安全运营", "三级项目": "视频号谬误审核", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 0.0, "一线自营人天": 0, "一线联营人天": 0.0, "质检预算": 22010.14, "质检成本": 0.0, "质检人天": 0.0, "质检投入人数": 0, "交付人天": 0.0, "质检交付配比": "N/A", "质检交付配比_raw": 0, "预算盈亏": "", "超预算率": 0, "预算状态": "数据录入中", "自营联营比": "N/A"}, {"一级项目": "WXG-内容审核", "二级项目": "短视频-安全运营", "三级项目": "视频号AI生成内容-二确", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 0.0, "一线自营人天": 0, "一线联营人天": 0.0, "质检预算": 0.0, "质检成本": 0.0, "质检人天": 0.0, "质检投入人数": 0, "交付人天": 0.0, "质检交付配比": "N/A", "质检交付配比_raw": 0, "预算盈亏": "", "超预算率": 0, "预算状态": "N/A", "自营联营比": "N/A"}, {"一级项目": "WXG-内容审核", "二级项目": "短视频-安全运营", "三级项目": "聚类审核", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 1726.84, "一线自营人天": 0, "一线联营人天": 1726.84, "质检预算": 39132.83, "质检成本": 45776.77, "质检人天": 78.83, "质检投入人数": 6, "交付人天": 1726.84, "质检交付配比": "1:21.91", "质检交付配比_raw": 0.0456, "预算盈亏": -6643.94, "超预算率": 16.98, "预算状态": "⚠️ 超预算", "自营联营比": "自营0% / 联营100%"}, {"一级项目": "WXG-内容审核", "二级项目": "短视频-安全运营", "三级项目": "拉黑后审", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 1215.02, "一线自营人天": 0, "一线联营人天": 1215.02, "质检预算": 28928.56, "质检成本": 30421.55, "质检人天": 51.73, "质检投入人数": 6, "交付人天": 1215.02, "质检交付配比": "1:23.49", "质检交付配比_raw": 0.0426, "预算盈亏": -1492.99, "超预算率": 5.16, "预算状态": "⚠️ 超预算", "自营联营比": "自营0% / 联营100%"}, {"一级项目": "WXG-内容审核", "二级项目": "短视频-内容运营", "三级项目": "视频号原创声明审核", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 0.0, "一线自营人天": 0, "一线联营人天": 0.0, "质检预算": 0.0, "质检成本": 0.0, "质检人天": 0.0, "质检投入人数": 0, "交付人天": 0.0, "质检交付配比": "N/A", "质检交付配比_raw": 0, "预算盈亏": "", "超预算率": 0, "预算状态": "N/A", "自营联营比": "N/A"}, {"一级项目": "WXG-内容审核", "二级项目": "短视频-内容运营", "三级项目": "视频号不鼓励媒体专项", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 301.24, "一线自营人天": 0, "一线联营人天": 301.24, "质检预算": 9403.69, "质检成本": 6141.03, "质检人天": 8.3, "质检投入人数": 2, "交付人天": 301.24, "质检交付配比": "1:36.29", "质检交付配比_raw": 0.0276, "预算盈亏": 3262.66, "超预算率": -34.7, "预算状态": "🟢 正常", "自营联营比": "自营0% / 联营100%"}, {"一级项目": "WXG-直播电商", "二级项目": "电商事中", "三级项目": "电商事中恶意虚假宣传运营-策略", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 0.0, "一线自营人天": 0, "一线联营人天": 0.0, "质检预算": 4459.99, "质检成本": 2509.56, "质检人天": 0.73, "质检投入人数": 1, "交付人天": 0.0, "质检交付配比": "N/A", "质检交付配比_raw": 0, "预算盈亏": 1950.43, "超预算率": -43.73, "预算状态": "🟢 正常", "自营联营比": "N/A"}, {"一级项目": "WXG-直播电商", "二级项目": "电商事后", "三级项目": "电商事后珠宝事后治理", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 89.0, "一线自营人天": 89, "一线联营人天": 0.0, "质检预算": 3107.16, "质检成本": 5019.12, "质检人天": 1.45, "质检投入人数": 1, "交付人天": 89.0, "质检交付配比": "1:61.38", "质检交付配比_raw": 0.0163, "预算盈亏": -1911.96, "超预算率": 61.53, "预算状态": "⚠️ 超预算", "自营联营比": "自营100% / 联营0%"}, {"一级项目": "WXG-直播电商", "二级项目": "电商搜推", "三级项目": "电商搜推农资园艺类目审核", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 73.0, "一线自营人天": 73, "一线联营人天": 0.0, "质检预算": 2853.4, "质检成本": 3768.66, "质检人天": 5.72, "质检投入人数": 1, "交付人天": 73.0, "质检交付配比": "1:12.76", "质检交付配比_raw": 0.0784, "预算盈亏": -915.25, "超预算率": 32.08, "预算状态": "⚠️ 超预算", "自营联营比": "自营100% / 联营0%"}, {"一级项目": "WXG-直播电商", "二级项目": "电商事中", "三级项目": "电商事中治理一起买活动事中审", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 77.0, "一线自营人天": 77, "一线联营人天": 0.0, "质检预算": 2830.66, "质检成本": 6684.34, "质检人天": 3.98, "质检投入人数": 2, "交付人天": 77.0, "质检交付配比": "1:19.35", "质检交付配比_raw": 0.0517, "预算盈亏": -3853.68, "超预算率": 136.14, "预算状态": "⚠️ 超预算", "自营联营比": "自营100% / 联营0%"}, {"一级项目": "WXG-直播电商", "二级项目": "电商事后", "三级项目": "电商事后违规治理", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 668.0, "一线自营人天": 668, "一线联营人天": 0.0, "质检预算": 29079.2, "质检成本": 23249.58, "质检人天": 31.32, "质检投入人数": 4, "交付人天": 668.0, "质检交付配比": "1:21.33", "质检交付配比_raw": 0.0469, "预算盈亏": 5829.62, "超预算率": -20.05, "预算状态": "🟢 正常", "自营联营比": "自营100% / 联营0%"}, {"一级项目": "WXG-直播电商", "二级项目": "电商事后", "三级项目": "电商事后分销治理", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 66.0, "一线自营人天": 66, "一线联营人天": 0.0, "质检预算": 2796.6, "质检成本": 5019.12, "质检人天": 1.45, "质检投入人数": 1, "交付人天": 66.0, "质检交付配比": "1:45.52", "质检交付配比_raw": 0.022, "预算盈亏": -2222.53, "超预算率": 79.47, "预算状态": "⚠️ 超预算", "自营联营比": "自营100% / 联营0%"}, {"一级项目": "WXG-直播电商", "二级项目": "电商事后", "三级项目": "电商事后售假治理", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 470.0, "一线自营人天": 470, "一线联营人天": 0.0, "质检预算": 21261.93, "质检成本": 10445.48, "质检人天": 16.0, "质检投入人数": 1, "交付人天": 470.0, "质检交付配比": "1:29.38", "质检交付配比_raw": 0.034, "预算盈亏": 10816.45, "超预算率": -50.87, "预算状态": "🟢 正常", "自营联营比": "自营100% / 联营0%"}, {"一级项目": "WXG-直播电商", "二级项目": "电商事前", "三级项目": "电商事前入驻审核模型标注", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 432.0, "一线自营人天": 0, "一线联营人天": 432.0, "质检预算": 5708.93, "质检成本": 12069.19, "质检人天": 23.88, "质检投入人数": 2, "交付人天": 432.0, "质检交付配比": "1:18.09", "质检交付配比_raw": 0.0553, "预算盈亏": -6360.27, "超预算率": 111.41, "预算状态": "⚠️ 超预算", "自营联营比": "自营0% / 联营100%"}, {"一级项目": "WXG-直播电商", "二级项目": "电商搜推", "三级项目": "电商搜推同款商品对比", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 172.0, "一线自营人天": 148, "一线联营人天": 24.0, "质检预算": 6641.12, "质检成本": 10968.22, "质检人天": 6.25, "质检投入人数": 2, "交付人天": 172.0, "质检交付配比": "1:27.52", "质检交付配比_raw": 0.0363, "预算盈亏": -4327.11, "超预算率": 65.16, "预算状态": "⚠️ 超预算", "自营联营比": "自营86% / 联营14%"}, {"一级项目": "WXG-直播电商", "二级项目": "电商事中", "三级项目": "电商事中虚假高危", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 288.0, "一线自营人天": 0, "一线联营人天": 288.0, "质检预算": 3187.9, "质检成本": 20593.4, "质检人天": 40.0, "质检投入人数": 2, "交付人天": 288.0, "质检交付配比": "1:7.2", "质检交付配比_raw": 0.1389, "预算盈亏": -17405.5, "超预算率": 545.99, "预算状态": "⚠️ 超预算", "自营联营比": "自营0% / 联营100%"}, {"一级项目": "WXG-直播电商", "二级项目": "电商事中", "三级项目": "电商事中团伙监控标注", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 240.0, "一线自营人天": 0, "一线联营人天": 240.0, "质检预算": 4645.35, "质检成本": 10691.75, "质检人天": 17.6, "质检投入人数": 2, "交付人天": 240.0, "质检交付配比": "1:13.64", "质检交付配比_raw": 0.0733, "预算盈亏": -6046.4, "超预算率": 130.16, "预算状态": "⚠️ 超预算", "自营联营比": "自营0% / 联营100%"}, {"一级项目": "WXG-直播电商", "二级项目": "电商事中", "三级项目": "电商事中福袋投诉审核", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 0.18, "一线自营人天": 0, "一线联营人天": 0.18, "质检预算": 1125.14, "质检成本": 2179.5, "质检人天": 5.0, "质检投入人数": 1, "交付人天": 0.18, "质检交付配比": "27.78:1", "质检交付配比_raw": 27.7778, "预算盈亏": -1054.36, "超预算率": 93.71, "预算状态": "⚠️ 超预算", "自营联营比": "自营0% / 联营100%"}, {"一级项目": "WXG-直播电商", "二级项目": "电商事后", "三级项目": "电商事后家电类目审核", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 120.0, "一线自营人天": 0, "一线联营人天": 120.0, "质检预算": 2578.45, "质检成本": 3475.8, "质检人天": 7.97, "质检投入人数": 1, "交付人天": 120.0, "质检交付配比": "1:15.06", "质检交付配比_raw": 0.0664, "预算盈亏": -897.35, "超预算率": 34.8, "预算状态": "⚠️ 超预算", "自营联营比": "自营0% / 联营100%"}, {"一级项目": "WXG-直播电商", "二级项目": "电商事中", "三级项目": "电商事中投诉队列", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 233.86, "一线自营人天": 51, "一线联营人天": 182.86, "质检预算": 5445.44, "质检成本": 19752.83, "质检人天": 26.74, "质检投入人数": 3, "交付人天": 233.86, "质检交付配比": "1:8.75", "质检交付配比_raw": 0.1143, "预算盈亏": -14307.39, "超预算率": 262.74, "预算状态": "⚠️ 超预算", "自营联营比": "自营22% / 联营78%"}, {"一级项目": "WXG-直播电商", "二级项目": "电商事中", "三级项目": "电商事中事中账号审核", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 198.6, "一线自营人天": 45, "一线联营人天": 153.6, "质检预算": 3261.58, "质检成本": 5281.5, "质检人天": 15.16, "质检投入人数": 2, "交付人天": 198.6, "质检交付配比": "1:13.1", "质检交付配比_raw": 0.0763, "预算盈亏": -2019.92, "超预算率": 61.93, "预算状态": "⚠️ 超预算", "自营联营比": "自营23% / 联营77%"}, {"一级项目": "WXG-直播电商", "二级项目": "电商事中", "三级项目": "电商事中侵权队列", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 378.0, "一线自营人天": 0, "一线联营人天": 378.0, "质检预算": 6989.19, "质检成本": 11251.71, "质检人天": 1.29, "质检投入人数": 1, "交付人天": 378.0, "质检交付配比": "1:293.02", "质检交付配比_raw": 0.0034, "预算盈亏": -4262.52, "超预算率": 60.99, "预算状态": "⚠️ 超预算", "自营联营比": "自营0% / 联营100%"}, {"一级项目": "WXG-直播电商", "二级项目": "电商搜推", "三级项目": "电商搜推推荐治理-直播间分级分类", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 1056.0, "一线自营人天": 0, "一线联营人天": 1056.0, "质检预算": 20080.37, "质检成本": 11494.89, "质检人天": 14.43, "质检投入人数": 1, "交付人天": 1056.0, "质检交付配比": "1:73.18", "质检交付配比_raw": 0.0137, "预算盈亏": 8585.48, "超预算率": -42.76, "预算状态": "🟢 正常", "自营联营比": "自营0% / 联营100%"}, {"一级项目": "WXG-直播电商", "二级项目": "电商搜推", "三级项目": "电商搜推推荐治理-体感评测", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 224.0, "一线自营人天": 80, "一线联营人天": 144.0, "质检预算": 6174.39, "质检成本": 2715.5, "质检人天": 5.07, "质检投入人数": 1, "交付人天": 224.0, "质检交付配比": "1:44.18", "质检交付配比_raw": 0.0226, "预算盈亏": 3458.89, "超预算率": -56.02, "预算状态": "🟢 正常", "自营联营比": "自营36% / 联营64%"}, {"一级项目": "WXG-直播电商", "二级项目": "电商搜推", "三级项目": "电商搜推推荐治理-珠宝垂类推荐审核", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 432.0, "一线自营人天": 0, "一线联营人天": 432.0, "质检预算": 8040.08, "质检成本": 29605.59, "质检人天": 46.25, "质检投入人数": 4, "交付人天": 432.0, "质检交付配比": "1:9.34", "质检交付配比_raw": 0.1071, "预算盈亏": -21565.51, "超预算率": 268.22, "预算状态": "⚠️ 超预算", "自营联营比": "自营0% / 联营100%"}, {"一级项目": "WXG-直播电商", "二级项目": "电商搜推", "三级项目": "电商搜推推荐治理-店铺分级分类", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 168.0, "一线自营人天": 0, "一线联营人天": 168.0, "质检预算": 2805.82, "质检成本": 10621.7, "质检人天": 20.5, "质检投入人数": 1, "交付人天": 168.0, "质检交付配比": "1:8.2", "质检交付配比_raw": 0.122, "预算盈亏": -7815.88, "超预算率": 278.56, "预算状态": "⚠️ 超预算", "自营联营比": "自营0% / 联营100%"}, {"一级项目": "WXG-直播电商", "二级项目": "电商事中", "三级项目": "电商事中老店新开审核", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 84.0, "一线自营人天": 0, "一线联营人天": 84.0, "质检预算": 2896.41, "质检成本": 831.5, "质检人天": 2.52, "质检投入人数": 1, "交付人天": 84.0, "质检交付配比": "1:33.33", "质检交付配比_raw": 0.03, "预算盈亏": 2064.91, "超预算率": -71.29, "预算状态": "🟢 正常", "自营联营比": "自营0% / 联营100%"}, {"一级项目": "WXG-直播电商", "二级项目": "电商搜推", "三级项目": "电商搜推商品高价治理", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 0.0, "一线自营人天": 0, "一线联营人天": 0.0, "质检预算": 14776.7, "质检成本": 38940.13, "质检人天": 75.37, "质检投入人数": 6, "交付人天": 0.0, "质检交付配比": "N/A", "质检交付配比_raw": 0, "预算盈亏": -24163.43, "超预算率": 163.52, "预算状态": "⚠️ 超预算", "自营联营比": "N/A"}, {"一级项目": "WXG-直播电商", "二级项目": "电商搜推", "三级项目": "电商搜推商品价格", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 223.23, "一线自营人天": 0, "一线联营人天": 223.23, "质检预算": 3320.3, "质检成本": 11939.41, "质检人天": 19.29, "质检投入人数": 2, "交付人天": 223.23, "质检交付配比": "1:11.57", "质检交付配比_raw": 0.0864, "预算盈亏": -8619.11, "超预算率": 259.59, "预算状态": "⚠️ 超预算", "自营联营比": "自营0% / 联营100%"}, {"一级项目": "WXG-直播电商", "二级项目": "电商事中", "三级项目": "电商事中服饰直播", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 410.0, "一线自营人天": 0, "一线联营人天": 410.0, "质检预算": 7281.87, "质检成本": 17232.43, "质检人天": 23.77, "质检投入人数": 4, "交付人天": 410.0, "质检交付配比": "1:17.25", "质检交付配比_raw": 0.058, "预算盈亏": -9950.56, "超预算率": 136.65, "预算状态": "⚠️ 超预算", "自营联营比": "自营0% / 联营100%"}, {"一级项目": "WXG-直播电商", "二级项目": "电商事前", "三级项目": "电商事前亮证", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 467.79, "一线自营人天": 0, "一线联营人天": 467.79, "质检预算": 3988.66, "质检成本": 9053.62, "质检人天": 17.87, "质检投入人数": 2, "交付人天": 467.79, "质检交付配比": "1:26.18", "质检交付配比_raw": 0.0382, "预算盈亏": -5064.95, "超预算率": 126.98, "预算状态": "⚠️ 超预算", "自营联营比": "自营0% / 联营100%"}, {"一级项目": "WXG-直播电商", "二级项目": "电商事中", "三级项目": "电商事中短视频治理", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 360.0, "一线自营人天": 0, "一线联营人天": 360.0, "质检预算": 13374.28, "质检成本": 38763.09, "质检人天": 50.11, "质检投入人数": 5, "交付人天": 360.0, "质检交付配比": "1:7.18", "质检交付配比_raw": 0.1392, "预算盈亏": -25388.81, "超预算率": 189.83, "预算状态": "⚠️ 超预算", "自营联营比": "自营0% / 联营100%"}, {"一级项目": "WXG-直播电商", "二级项目": "电商事后", "三级项目": "电商事后违禁&超范围", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 380.1, "一线自营人天": 0, "一线联营人天": 380.1, "质检预算": 8860.5, "质检成本": 2958.2, "质检人天": 5.94, "质检投入人数": 1, "交付人天": 380.1, "质检交付配比": "1:63.99", "质检交付配比_raw": 0.0156, "预算盈亏": 5902.3, "超预算率": -66.61, "预算状态": "🟢 正常", "自营联营比": "自营0% / 联营100%"}, {"一级项目": "WXG-直播电商", "二级项目": "电商事后", "三级项目": "电商事后客服申诉", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 240.0, "一线自营人天": 0, "一线联营人天": 240.0, "质检预算": 4922.5, "质检成本": 6006.0, "质检人天": 12.06, "质检投入人数": 1, "交付人天": 240.0, "质检交付配比": "1:19.9", "质检交付配比_raw": 0.0503, "预算盈亏": -1083.5, "超预算率": 22.01, "预算状态": "⚠️ 超预算", "自营联营比": "自营0% / 联营100%"}, {"一级项目": "WXG-直播电商", "二级项目": "电商事后", "三级项目": "电商事后商品搜推治理", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 912.0, "一线自营人天": 0, "一线联营人天": 912.0, "质检预算": 16107.3, "质检成本": 24408.38, "质检人天": 44.1, "质检投入人数": 3, "交付人天": 912.0, "质检交付配比": "1:20.68", "质检交付配比_raw": 0.0484, "预算盈亏": -8301.08, "超预算率": 51.54, "预算状态": "⚠️ 超预算", "自营联营比": "自营0% / 联营100%"}, {"一级项目": "WXG-直播电商", "二级项目": "电商事中", "三级项目": "电商事中珠宝专审", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 1433.0, "一线自营人天": 233, "一线联营人天": 1200.0, "质检预算": 30838.82, "质检成本": 43135.85, "质检人天": 47.6, "质检投入人数": 5, "交付人天": 1433.0, "质检交付配比": "1:30.11", "质检交付配比_raw": 0.0332, "预算盈亏": -12297.03, "超预算率": 39.88, "预算状态": "⚠️ 超预算", "自营联营比": "自营16% / 联营84%"}, {"一级项目": "WXG-直播电商", "二级项目": "电商事中", "三级项目": "电商事中本地生活", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 292.08, "一线自营人天": 0, "一线联营人天": 292.08, "质检预算": 4620.39, "质检成本": 30548.71, "质检人天": 47.37, "质检投入人数": 4, "交付人天": 292.08, "质检交付配比": "1:6.17", "质检交付配比_raw": 0.1622, "预算盈亏": -25928.32, "超预算率": 561.17, "预算状态": "⚠️ 超预算", "自营联营比": "自营0% / 联营100%"}, {"一级项目": "WXG-直播电商", "二级项目": "电商事后", "三级项目": "电商事后账号分级分类", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 336.0, "一线自营人天": 0, "一线联营人天": 336.0, "质检预算": 5637.43, "质检成本": 7455.8, "质检人天": 22.0, "质检投入人数": 1, "交付人天": 336.0, "质检交付配比": "1:15.27", "质检交付配比_raw": 0.0655, "预算盈亏": -1818.37, "超预算率": 32.26, "预算状态": "⚠️ 超预算", "自营联营比": "自营0% / 联营100%"}, {"一级项目": "WXG-直播电商", "二级项目": "电商事后", "三级项目": "电商事后短视频带货", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 144.0, "一线自营人天": 0, "一线联营人天": 144.0, "质检预算": 914.18, "质检成本": 1164.9, "质检人天": 2.5, "质检投入人数": 1, "交付人天": 144.0, "质检交付配比": "1:57.6", "质检交付配比_raw": 0.0174, "预算盈亏": -250.72, "超预算率": 27.43, "预算状态": "⚠️ 超预算", "自营联营比": "自营0% / 联营100%"}, {"一级项目": "WXG-直播电商", "二级项目": "电商搜推", "三级项目": "电商搜推高价预警队列", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 57.0, "一线自营人天": 57, "一线联营人天": 0.0, "质检预算": 2025.07, "质检成本": 3252.27, "质检人天": 3.25, "质检投入人数": 1, "交付人天": 57.0, "质检交付配比": "1:17.54", "质检交付配比_raw": 0.057, "预算盈亏": -1227.21, "超预算率": 60.6, "预算状态": "⚠️ 超预算", "自营联营比": "自营100% / 联营0%"}, {"一级项目": "WXG-直播电商", "二级项目": "电商事后", "三级项目": "电商事后人身安全队列审核", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 16.0, "一线自营人天": 16, "一线联营人天": 0.0, "质检预算": 657.8, "质检成本": 913.85, "质检人天": 1.5, "质检投入人数": 1, "交付人天": 16.0, "质检交付配比": "1:10.67", "质检交付配比_raw": 0.0938, "预算盈亏": -256.05, "超预算率": 38.93, "预算状态": "⚠️ 超预算", "自营联营比": "自营100% / 联营0%"}, {"一级项目": "WXG-直播电商", "二级项目": "电商其他", "三级项目": "电商模型商品CPV属性标注", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 67.41, "一线自营人天": 0, "一线联营人天": 67.41, "质检预算": 871.26, "质检成本": 3322.1, "质检人天": 9.05, "质检投入人数": 1, "交付人天": 67.41, "质检交付配比": "1:7.45", "质检交付配比_raw": 0.1343, "预算盈亏": -2450.84, "超预算率": 281.3, "预算状态": "⚠️ 超预算", "自营联营比": "自营0% / 联营100%"}, {"一级项目": "WXG-直播电商", "二级项目": "电商事后", "三级项目": "电商事后类目治理运营-策略", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 0.0, "一线自营人天": 0, "一线联营人天": 0.0, "质检预算": 828.54, "质检成本": 2509.56, "质检人天": 0.73, "质检投入人数": 1, "交付人天": 0.0, "质检交付配比": "N/A", "质检交付配比_raw": 0, "预算盈亏": -1681.02, "超预算率": 202.89, "预算状态": "⚠️ 超预算", "自营联营比": "N/A"}, {"一级项目": "WXG-直播电商", "二级项目": "电商事中", "三级项目": "电商事中重点行业【服饰&食品】-策略", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 0.0, "一线自营人天": 0, "一线联营人天": 0.0, "质检预算": 1416.08, "质检成本": 5019.12, "质检人天": 1.45, "质检投入人数": 1, "交付人天": 0.0, "质检交付配比": "N/A", "质检交付配比_raw": 0, "预算盈亏": -3603.04, "超预算率": 254.44, "预算状态": "⚠️ 超预算", "自营联营比": "N/A"}, {"一级项目": "WXG-直播电商", "二级项目": "电商事中", "三级项目": "电商事中搜同款审核-交付", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 72.0, "一线自营人天": 0, "一线联营人天": 72.0, "质检预算": 1476.75, "质检成本": 2087.5, "质检人天": 6.32, "质检投入人数": 1, "交付人天": 72.0, "质检交付配比": "1:11.39", "质检交付配比_raw": 0.0878, "预算盈亏": -610.75, "超预算率": 41.36, "预算状态": "⚠️ 超预算", "自营联营比": "自营0% / 联营100%"}, {"一级项目": "WXG-直播电商", "二级项目": "电商搜推", "三级项目": "电商搜推商家教育问题反馈审核-交付", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 83.0, "一线自营人天": 83, "一线联营人天": 0.0, "质检预算": 407.19, "质检成本": 13289.05, "质检人天": 14.32, "质检投入人数": 2, "交付人天": 83.0, "质检交付配比": "1:5.8", "质检交付配比_raw": 0.1725, "预算盈亏": -12881.86, "超预算率": 3163.61, "预算状态": "⚠️ 超预算", "自营联营比": "自营100% / 联营0%"}, {"一级项目": "WXG-直播电商", "二级项目": "电商搜推", "三级项目": "电商搜推商品分级店铺审核/负反馈评测审核-交付", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 72.0, "一线自营人天": 0, "一线联营人天": 72.0, "质检预算": 1475.1, "质检成本": 2552.4, "质检人天": 6.95, "质检投入人数": 1, "交付人天": 72.0, "质检交付配比": "1:10.36", "质检交付配比_raw": 0.0965, "预算盈亏": -1077.3, "超预算率": 73.03, "预算状态": "⚠️ 超预算", "自营联营比": "自营0% / 联营100%"}, {"一级项目": "WXG-直播电商", "二级项目": "电商搜推", "三级项目": "电商搜推体感测评审核计件制需求-交付", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 38.0, "一线自营人天": 38, "一线联营人天": 0.0, "质检预算": 1189.86, "质检成本": 6582.71, "质检人天": 8.31, "质检投入人数": 2, "交付人天": 38.0, "质检交付配比": "1:4.57", "质检交付配比_raw": 0.2187, "预算盈亏": -5392.84, "超预算率": 453.23, "预算状态": "⚠️ 超预算", "自营联营比": "自营100% / 联营0%"}, {"一级项目": "WXG-直播电商", "二级项目": "电商搜推", "三级项目": "电商搜推商品分级-店铺审核/负反馈评测-审核", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 0.0, "一线自营人天": 0, "一线联营人天": 0.0, "质检预算": 0.0, "质检成本": 0.0, "质检人天": 0.0, "质检投入人数": 0, "交付人天": 0.0, "质检交付配比": "N/A", "质检交付配比_raw": 0, "预算盈亏": "", "超预算率": 0, "预算状态": "N/A", "自营联营比": "N/A"}, {"一级项目": "标注采集", "二级项目": "标注采集-PCG", "三级项目": "AI智能体语料采集&撰写", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 0.0, "一线自营人天": 0, "一线联营人天": 0.0, "质检预算": 0.0, "质检成本": 580.94, "质检人天": 0.69, "质检投入人数": 1, "交付人天": 0.0, "质检交付配比": "N/A", "质检交付配比_raw": 0, "预算盈亏": "", "超预算率": 0, "预算状态": "N/A", "自营联营比": "N/A"}, {"一级项目": "标注采集", "二级项目": "标注采集", "三级项目": "游戏说", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 645.77, "一线自营人天": 0, "一线联营人天": 645.77, "质检预算": 17305.75, "质检成本": 8160.4, "质检人天": 14.0, "质检投入人数": 1, "交付人天": 645.77, "质检交付配比": "1:46.13", "质检交付配比_raw": 0.0217, "预算盈亏": 9145.35, "超预算率": -52.85, "预算状态": "🟢 正常", "自营联营比": "自营0% / 联营100%"}, {"一级项目": "WXG-搜索标注", "二级项目": "WXG-搜索标注", "三级项目": "微信搜索问一问-问答", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 696.0, "一线自营人天": 0, "一线联营人天": 696.0, "质检预算": 17893.92, "质检成本": 20112.46, "质检人天": 15.0, "质检投入人数": 1, "交付人天": 696.0, "质检交付配比": "1:46.4", "质检交付配比_raw": 0.0216, "预算盈亏": -2218.54, "超预算率": 12.4, "预算状态": "⚠️ 超预算", "自营联营比": "自营0% / 联营100%"}, {"一级项目": "WXG-搜索标注", "二级项目": "WXG-搜索标注", "三级项目": "相关性（图文+直播）", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 192.0, "一线自营人天": 0, "一线联营人天": 192.0, "质检预算": 5910.13, "质检成本": 20085.45, "质检人天": 5.64, "质检投入人数": 1, "交付人天": 192.0, "质检交付配比": "1:34.04", "质检交付配比_raw": 0.0294, "预算盈亏": -14175.32, "超预算率": 239.85, "预算状态": "⚠️ 超预算", "自营联营比": "自营0% / 联营100%"}, {"一级项目": "WXG-搜索标注", "二级项目": "WXG-搜索标注", "三级项目": "图文满意度", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 61.22, "一线自营人天": 0, "一线联营人天": 61.22, "质检预算": 897.07, "质检成本": 2028.2, "质检人天": 3.96, "质检投入人数": 1, "交付人天": 61.22, "质检交付配比": "1:15.46", "质检交付配比_raw": 0.0647, "预算盈亏": -1131.13, "超预算率": 126.09, "预算状态": "⚠️ 超预算", "自营联营比": "自营0% / 联营100%"}, {"一级项目": "WXG-搜索标注", "二级项目": "WXG-搜索标注", "三级项目": "搜一搜百科", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 261.0, "一线自营人天": 45, "一线联营人天": 216.0, "质检预算": 6892.74, "质检成本": 22035.7, "质检人天": 11.14, "质检投入人数": 2, "交付人天": 261.0, "质检交付配比": "1:23.43", "质检交付配比_raw": 0.0427, "预算盈亏": -15142.95, "超预算率": 219.69, "预算状态": "⚠️ 超预算", "自营联营比": "自营17% / 联营83%"}, {"一级项目": "WXG-搜索标注", "二级项目": "WXG-搜索标注", "三级项目": "图文质量评估", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 48.0, "一线自营人天": 0, "一线联营人天": 48.0, "质检预算": 968.07, "质检成本": 784.94, "质检人天": 1.02, "质检投入人数": 1, "交付人天": 48.0, "质检交付配比": "1:47.06", "质检交付配比_raw": 0.0213, "预算盈亏": 183.13, "超预算率": -18.92, "预算状态": "🟢 正常", "自营联营比": "自营0% / 联营100%"}, {"一级项目": "WXG-搜索标注", "二级项目": "WXG-搜索标注", "三级项目": "大盘满意度", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 3.07, "一线自营人天": 0, "一线联营人天": 3.07, "质检预算": 0.0, "质检成本": 1282.05, "质检人天": 14.4, "质检投入人数": 2, "交付人天": 3.07, "质检交付配比": "4.69:1", "质检交付配比_raw": 4.6906, "预算盈亏": "", "超预算率": 0, "预算状态": "N/A", "自营联营比": "自营0% / 联营100%"}, {"一级项目": "WXG-搜索标注", "二级项目": "WXG-搜索标注", "三级项目": "大盘满意度推理", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 243.28, "一线自营人天": 0, "一线联营人天": 243.28, "质检预算": 8147.85, "质检成本": 7190.8, "质检人天": 14.4, "质检投入人数": 2, "交付人天": 243.28, "质检交付配比": "1:16.89", "质检交付配比_raw": 0.0592, "预算盈亏": 957.05, "超预算率": -11.75, "预算状态": "🟢 正常", "自营联营比": "自营0% / 联营100%"}, {"一级项目": "元宝", "二级项目": "元宝", "三级项目": "生态审核-元宝内容审核", "项目难度": null, "项目优先级": null, "项目达标情况": null, "准确率": null, "是否IOA": null, "一线交付人天": 75.0, "一线自营人天": 75, "一线联营人天": 0.0, "质检预算": 5555.0, "质检成本": 4701.32, "质检人天": 6.03, "质检投入人数": 1, "交付人天": 75.0, "质检交付配比": "1:12.44", "质检交付配比_raw": 0.0804, "预算盈亏": 853.68, "超预算率": -15.37, "预算状态": "🟢 正常", "自营联营比": "自营100% / 联营0%"}], "total_projects": 155, "total_qc_manday": 4619.68, "total_deliver_manday": 124719.03, "overall_qc_deliver_ratio": "1:27.0", "total_qc_staff": 471, "total_budget": 2948531.43, "total_cost": 3034150.58, "budget_surplus": -85619.15, "budget_overrun_rate": 2.9, "budget_status": "⚠️ 超预算", "over_budget_projects": [{"name": "QQ空间", "budget": 13364.83, "cost": 15525.81, "surplus": -2160.97, "rate": 16.17}, {"name": "微视", "budget": 28773.25, "cost": 31856.5, "surplus": -3083.25, "rate": 10.72}, {"name": "腾讯体育", "budget": 8068.23, "cost": 8705.78, "surplus": -637.56, "rate": 7.9}, {"name": "腾讯新闻", "budget": 84296.05, "cost": 85470.37, "surplus": -1174.31, "rate": 1.39}, {"name": "生态-专审-企鹅号生态", "budget": 14124.0, "cost": 14571.28, "surplus": -447.28, "rate": 3.17}, {"name": "社交线生态-腾讯文档", "budget": 1765.5, "cost": 9472.79, "surplus": -7707.29, "rate": 436.55}, {"name": "IEG-心悦会员", "budget": 4083.88, "cost": 14721.6, "surplus": -10637.72, "rate": 260.48}, {"name": "消费者投诉数据标签审核", "budget": 685.83, "cost": 3918.36, "surplus": -3232.53, "rate": 471.33}, {"name": "男凝留言评论审核", "budget": 17487.5, "cost": 29638.1, "surplus": -12150.6, "rate": 69.48}, {"name": "公众号快讯审核", "budget": 14606.95, "cost": 22362.4, "surplus": -7755.46, "rate": 53.09}, {"name": "开平红包", "budget": 26482.12, "cost": 36000.91, "surplus": -9518.79, "rate": 35.94}, {"name": "评论弹幕账号审核追加", "budget": 149211.2, "cost": 164223.83, "surplus": -15012.62, "rate": 10.06}, {"name": "投流审核", "budget": 16643.39, "cost": 18575.79, "surplus": -1932.4, "rate": 11.61}, {"name": "视频号医疗二确", "budget": 3895.9, "cost": 15271.77, "surplus": -11375.87, "rate": 292.0}, {"name": "视频号矩阵号-短期需求", "budget": 3493.61, "cost": 7702.83, "surplus": -4209.22, "rate": 120.48}, {"name": "视频号内容板块相似模型标注需求", "budget": 674.73, "cost": 6009.08, "surplus": -5334.35, "rate": 790.59}, {"name": "引流/投放订单审核", "budget": 33759.39, "cost": 37996.59, "surplus": -4237.2, "rate": 12.55}, {"name": "视频号直播红点审核需求", "budget": 38713.05, "cost": 44155.84, "surplus": -5442.79, "rate": 14.06}, {"name": "方言内容审核", "budget": 9974.22, "cost": 16462.3, "surplus": -6488.08, "rate": 65.05}, {"name": "视频号短视频红点项目", "budget": 27856.81, "cost": 32304.48, "surplus": -4447.66, "rate": 15.97}, {"name": "视频号谣言审核", "budget": 37925.73, "cost": 46914.54, "surplus": -8988.81, "rate": 23.7}, {"name": "视频号直播安全审核", "budget": 39347.13, "cost": 58136.41, "surplus": -18789.27, "rate": 47.75}, {"name": "视频号投诉队列审核", "budget": 56008.21, "cost": 60169.18, "surplus": -4160.97, "rate": 7.43}, {"name": "青少年专项审核", "budget": 11253.0, "cost": 14517.16, "surplus": -3264.16, "rate": 29.01}, {"name": "视频号真人分类审核", "budget": 11409.86, "cost": 14517.16, "surplus": -3107.3, "rate": 27.23}, {"name": "视频号创作成本审核需求", "budget": 3148.75, "cost": 14035.55, "surplus": -10886.8, "rate": 345.75}, {"name": "内容运营-二确业务", "budget": 122499.27, "cost": 140549.02, "surplus": -18049.74, "rate": 14.73}, {"name": "引流审核", "budget": 18240.1, "cost": 28716.65, "surplus": -10476.56, "rate": 57.44}, {"name": "视频号加热评估需求", "budget": 1349.33, "cost": 2445.99, "surplus": -1096.66, "rate": 81.27}, {"name": "长视频审核", "budget": 12645.42, "cost": 21899.45, "surplus": -9254.03, "rate": 73.18}, {"name": "视频号直播文本标注需求", "budget": 9576.42, "cost": 33611.27, "surplus": -24034.85, "rate": 250.98}, {"name": "账号质量评估", "budget": 3289.0, "cost": 9569.26, "surplus": -6280.26, "rate": 190.95}, {"name": "权益关闭二确", "budget": 14800.5, "cost": 17985.97, "surplus": -3185.47, "rate": 21.52}, {"name": "高热和声明全量二确", "budget": 18243.5, "cost": 23722.1, "surplus": -5478.6, "rate": 30.03}, {"name": "微信公众号留言图片审核", "budget": 13857.9, "cost": 37383.9, "surplus": -23526.0, "rate": 169.77}, {"name": "微信公众号图片流审核需求", "budget": 23266.09, "cost": 62114.7, "surplus": -38848.61, "rate": 166.98}, {"name": "开平UGC内容分级审核需求", "budget": 3056.49, "cost": 6947.94, "surplus": -3891.45, "rate": 127.32}, {"name": "公众号文章分级标注-四项目", "budget": 45343.97, "cost": 56489.71, "surplus": -11145.74, "rate": 24.58}, {"name": "开平文章时效性审核需求", "budget": 3037.74, "cost": 7317.53, "surplus": -4279.78, "rate": 140.89}, {"name": "商户停滞交易审核", "budget": 880.56, "cost": 2235.88, "surplus": -1355.32, "rate": 153.92}, {"name": "微信支付巡检", "budget": 2032.31, "cost": 3353.81, "surplus": -1321.5, "rate": 65.02}, {"name": "身份证ps-通航", "budget": 3191.9, "cost": 5991.81, "surplus": -2799.91, "rate": 87.72}, {"name": "视频号机审标签审核", "budget": 4350.37, "cost": 7396.37, "surplus": -3046.01, "rate": 70.02}, {"name": "视频号录播审核", "budget": 5132.81, "cost": 5745.29, "surplus": -612.48, "rate": 11.93}, {"name": "聚类审核", "budget": 39132.83, "cost": 45776.77, "surplus": -6643.94, "rate": 16.98}, {"name": "拉黑后审", "budget": 28928.56, "cost": 30421.55, "surplus": -1492.99, "rate": 5.16}, {"name": "电商事后珠宝事后治理", "budget": 3107.16, "cost": 5019.12, "surplus": -1911.96, "rate": 61.53}, {"name": "电商搜推农资园艺类目审核", "budget": 2853.4, "cost": 3768.66, "surplus": -915.25, "rate": 32.08}, {"name": "电商事中治理一起买活动事中审", "budget": 2830.66, "cost": 6684.34, "surplus": -3853.68, "rate": 136.14}, {"name": "电商事后分销治理", "budget": 2796.6, "cost": 5019.12, "surplus": -2222.53, "rate": 79.47}, {"name": "电商事前入驻审核模型标注", "budget": 5708.93, "cost": 12069.19, "surplus": -6360.27, "rate": 111.41}, {"name": "电商搜推同款商品对比", "budget": 6641.12, "cost": 10968.22, "surplus": -4327.11, "rate": 65.16}, {"name": "电商事中虚假高危", "budget": 3187.9, "cost": 20593.4, "surplus": -17405.5, "rate": 545.99}, {"name": "电商事中团伙监控标注", "budget": 4645.35, "cost": 10691.75, "surplus": -6046.4, "rate": 130.16}, {"name": "电商事中福袋投诉审核", "budget": 1125.14, "cost": 2179.5, "surplus": -1054.36, "rate": 93.71}, {"name": "电商事后家电类目审核", "budget": 2578.45, "cost": 3475.8, "surplus": -897.35, "rate": 34.8}, {"name": "电商事中投诉队列", "budget": 5445.44, "cost": 19752.83, "surplus": -14307.39, "rate": 262.74}, {"name": "电商事中事中账号审核", "budget": 3261.58, "cost": 5281.5, "surplus": -2019.92, "rate": 61.93}, {"name": "电商事中侵权队列", "budget": 6989.19, "cost": 11251.71, "surplus": -4262.52, "rate": 60.99}, {"name": "电商搜推推荐治理-珠宝垂类推荐审核", "budget": 8040.08, "cost": 29605.59, "surplus": -21565.51, "rate": 268.22}, {"name": "电商搜推推荐治理-店铺分级分类", "budget": 2805.82, "cost": 10621.7, "surplus": -7815.88, "rate": 278.56}, {"name": "电商搜推商品高价治理", "budget": 14776.7, "cost": 38940.13, "surplus": -24163.43, "rate": 163.52}, {"name": "电商搜推商品价格", "budget": 3320.3, "cost": 11939.41, "surplus": -8619.11, "rate": 259.59}, {"name": "电商事中服饰直播", "budget": 7281.87, "cost": 17232.43, "surplus": -9950.56, "rate": 136.65}, {"name": "电商事前亮证", "budget": 3988.66, "cost": 9053.62, "surplus": -5064.95, "rate": 126.98}, {"name": "电商事中短视频治理", "budget": 13374.28, "cost": 38763.09, "surplus": -25388.81, "rate": 189.83}, {"name": "电商事后客服申诉", "budget": 4922.5, "cost": 6006.0, "surplus": -1083.5, "rate": 22.01}, {"name": "电商事后商品搜推治理", "budget": 16107.3, "cost": 24408.38, "surplus": -8301.08, "rate": 51.54}, {"name": "电商事中珠宝专审", "budget": 30838.82, "cost": 43135.85, "surplus": -12297.03, "rate": 39.88}, {"name": "电商事中本地生活", "budget": 4620.39, "cost": 30548.71, "surplus": -25928.32, "rate": 561.17}, {"name": "电商事后账号分级分类", "budget": 5637.43, "cost": 7455.8, "surplus": -1818.37, "rate": 32.26}, {"name": "电商事后短视频带货", "budget": 914.18, "cost": 1164.9, "surplus": -250.72, "rate": 27.43}, {"name": "电商搜推高价预警队列", "budget": 2025.07, "cost": 3252.27, "surplus": -1227.21, "rate": 60.6}, {"name": "电商事后人身安全队列审核", "budget": 657.8, "cost": 913.85, "surplus": -256.05, "rate": 38.93}, {"name": "电商模型商品CPV属性标注", "budget": 871.26, "cost": 3322.1, "surplus": -2450.84, "rate": 281.3}, {"name": "电商事后类目治理运营-策略", "budget": 828.54, "cost": 2509.56, "surplus": -1681.02, "rate": 202.89}, {"name": "电商事中重点行业【服饰&食品】-策略", "budget": 1416.08, "cost": 5019.12, "surplus": -3603.04, "rate": 254.44}, {"name": "电商事中搜同款审核-交付", "budget": 1476.75, "cost": 2087.5, "surplus": -610.75, "rate": 41.36}, {"name": "电商搜推商家教育问题反馈审核-交付", "budget": 407.19, "cost": 13289.05, "surplus": -12881.86, "rate": 3163.61}, {"name": "电商搜推商品分级店铺审核/负反馈评测审核-交付", "budget": 1475.1, "cost": 2552.4, "surplus": -1077.3, "rate": 73.03}, {"name": "电商搜推体感测评审核计件制需求-交付", "budget": 1189.86, "cost": 6582.71, "surplus": -5392.84, "rate": 453.23}, {"name": "微信搜索问一问-问答", "budget": 17893.92, "cost": 20112.46, "surplus": -2218.54, "rate": 12.4}, {"name": "相关性（图文+直播）", "budget": 5910.13, "cost": 20085.45, "surplus": -14175.32, "rate": 239.85}, {"name": "图文满意度", "budget": 897.07, "cost": 2028.2, "surplus": -1131.13, "rate": 126.09}, {"name": "搜一搜百科", "budget": 6892.74, "cost": 22035.7, "surplus": -15142.95, "rate": 219.69}], "reach_rate": 0.0, "reach_count": 0, "high_diff_count": 0, "overfit_projects": ["企鹅号质量", "生态审核-其他产品", "生态审核-社交线", "生态审核-社交线", "IEG-内容审核", "S1职能线", "短视频-内容运营", "短视频-安全运营", "短视频-内容运营", "短视频-内容运营", "短视频-内容运营", "WXG-开平", "WXG-支付", "电商事中", "电商事后", "电商事中", "电商事后", "电商事中", "电商事中", "电商搜推", "电商事中", "电商事后", "电商搜推", "电商事后", "电商事后", "电商事中", "标注采集-PCG", "WXG-搜索标注", "WXG-搜索标注"], "underfit_projects": ["QQ频道", "QQ空间", "微视", "微视-运营", "腾讯视频", "腾讯新闻", "生态审核-其他产品", "生态审核-其他产品", "生态审核-社交线", "生态审核-社交线", "生态审核-社交线", "WXG-开平", "短视频-安全运营", "直播-直播运营", "短视频-安全运营", "直播-直播安全", "短视频-安全运营", "短视频-内容运营", "短视频-安全运营", "WXG-开平", "WXG-开平", "短视频-安全运营", "WXG-开平", "WXG-运营平台", "短视频-安全运营", "电商搜推"], "conclusions": ["📊 本月项目整体达标率 0.0%（0/155 个项目达标）", "⚠️ 风险提示：企鹅号质量, 生态审核-其他产品, 生态审核-社交线 等项目人均体量偏低，存在人力过配风险，建议适当调减投入", "⚠️ 风险提示：QQ频道, QQ空间, 微视 等项目人均体量偏高，存在人力不足风险，建议增援", "⚠️ 风险提示：整体达标率低于80%，需重点排查未达标项目的根因（人力配置/能力结构/项目难度）"], "suggestions": ["【建议1】建立项目人力配置动态调节机制，每月根据体量变化±10%弹性调整人力，避免静态配置导致的效率损失", "【建议2】对未达标项目实施专项提升计划：首先确认是否因人力不足、能力不匹配还是项目本身难度超预期，针对性制定解决方案", "【建议3】对高难度且高优先级的P0/P1项目，确保配置AI精通/熟练档位人员占比不低于30%，提升质检交付质量"]}, "module4": {"total_staff": 147, "total_基本工资": 0.0, "avg_基本工资": 0.0, "total_绩效工资": 0.0, "avg_绩效工资": 0.0, "total_行政成本": 0.0, "avg_行政成本": 0.0, "total_招聘成本": 0.0, "avg_招聘成本": 0.0, "total_辞退成本": 0.0, "avg_辞退成本": 0.0, "total_cost": 0.0, "avg_cost": 0.0, "overtime_col": "2月加班工时", "ot_pay_col": "2月加班转薪工时", "expire_col": "3月即将到期调休工时", "total_overtime": 1021.5, "total_ot_pay": 352.0, "total_expire": 856.5, "grp_overtime": {"培训管理组": 0.0, "质量管理1组": 265.5, "质量管理2组": 433.0, "质量管理3组": 87.5, "质量管理3组-甲方": 235.5}, "grp_ot_pay": {"培训管理组": 0.0, "质量管理1组": 86.0, "质量管理2组": 118.5, "质量管理3组": 14.5, "质量管理3组-甲方": 133.0}, "grp_expire": {"培训管理组": 0.0, "质量管理1组": 285.0, "质量管理2组": 475.0, "质量管理3组": 85.0, "质量管理3组-甲方": 11.5}, "overtime_table": [{"组别": "培训管理组", "本月加班时长合计(h)": 0.0, "本月加班转薪合计(h)": 0.0, "即将过期调休(h)": 0.0}, {"组别": "质量管理1组", "本月加班时长合计(h)": 265.5, "本月加班转薪合计(h)": 86.0, "即将过期调休(h)": 285.0}, {"组别": "质量管理2组", "本月加班时长合计(h)": 433.0, "本月加班转薪合计(h)": 118.5, "即将过期调休(h)": 475.0}, {"组别": "质量管理3组", "本月加班时长合计(h)": 87.5, "本月加班转薪合计(h)": 14.5, "即将过期调休(h)": 85.0}, {"组别": "质量管理3组-甲方", "本月加班时长合计(h)": 235.5, "本月加班转薪合计(h)": 133.0, "即将过期调休(h)": 11.5}, {"组别": "合计", "本月加班时长合计(h)": 1021.5, "本月加班转薪合计(h)": 352.0, "即将过期调休(h)": 856.5}], "expire_list": [{"组别": "质量管理1组", "组2": "A组", "姓名": "刘跃", "账号": "junelyliu", "职级": "L2", "直接上级": "feitiantian(田菲)", "调休工时(h)": 127.0}, {"组别": "质量管理1组", "组2": "A组", "姓名": "王嘉琪", "账号": "chloeeewang", "职级": "1-3", "直接上级": "caylacao(曹原)", "调休工时(h)": 28.5}, {"组别": "质量管理1组", "组2": "B组", "姓名": "王倩", "账号": "ellenawang", "职级": "L2", "直接上级": "ginnytian(田菁)", "调休工时(h)": 22.5}, {"组别": "质量管理1组", "组2": "A组", "姓名": "王静静", "账号": "jinnywang", "职级": "1-3", "直接上级": "feitiantian(田菲)", "调休工时(h)": 21.5}, {"组别": "质量管理1组", "组2": "B组", "姓名": "李宝", "账号": "baoli", "职级": "3-1", "直接上级": "miayaowang(王瑶)", "调休工时(h)": 20.5}, {"组别": "质量管理1组", "组2": "B组", "姓名": "邓阳兰", "账号": "larissadeng", "职级": "1-1", "直接上级": "ginnytian(田菁)", "调休工时(h)": 17.0}, {"组别": "质量管理1组", "组2": "A组", "姓名": "詹琪", "账号": "kathzhan", "职级": "L2", "直接上级": "ashazhou(周国华)", "调休工时(h)": 12.0}, {"组别": "质量管理1组", "组2": "A组", "姓名": "曹雪", "账号": "nicolacao", "职级": "1-1", "直接上级": "tianyoulai(赖天有)", "调休工时(h)": 11.5}, {"组别": "质量管理1组", "组2": "A组", "姓名": "袁成森", "账号": "danielyuan", "职级": "1-1", "直接上级": "chloeeewang(王嘉琪)", "调休工时(h)": 10.5}, {"组别": "质量管理1组", "组2": "A组", "姓名": "赖天有", "账号": "tianyoulai", "职级": "1-3", "直接上级": "caylacao(曹原)", "调休工时(h)": 8.5}, {"组别": "质量管理1组", "组2": "A组", "姓名": "田菲", "账号": "feitiantian", "职级": "1-1", "直接上级": "caylacao(曹原)", "调休工时(h)": 2.5}, {"组别": "质量管理1组", "组2": "A组", "姓名": "王礼敬", "账号": "jevonswang", "职级": "1-3", "直接上级": "ashazhou(周国华)", "调休工时(h)": 2.0}, {"组别": "质量管理1组", "组2": "A组", "姓名": "符英琪", "账号": "joannafu", "职级": "1-1", "直接上级": "feitiantian(田菲)", "调休工时(h)": 1.0}, {"组别": "质量管理2组", "组2": "A组", "姓名": "刘凤娟", "账号": "ethelliu", "职级": "L2", "直接上级": "saphielian(连世慧)", "调休工时(h)": 45.5}, {"组别": "质量管理2组", "组2": "A组", "姓名": "张恩浩", "账号": "barryhzhang", "职级": "1-3", "直接上级": "saphielian(连世慧)", "调休工时(h)": 44.5}, {"组别": "质量管理2组", "组2": "A组", "姓名": "黄亚晗", "账号": "cheerhuang", "职级": "L2", "直接上级": "gretahou(侯树娇)", "调休工时(h)": 37.0}, {"组别": "质量管理2组", "组2": "A组", "姓名": "王亚玲", "账号": "chachawang", "职级": "1-1", "直接上级": "saphielian(连世慧)", "调休工时(h)": 33.5}, {"组别": "质量管理2组", "组2": "A组", "姓名": "张经卓", "账号": "zjzzhang", "职级": "L2", "直接上级": "gretahou(侯树娇)", "调休工时(h)": 32.0}, {"组别": "质量管理2组", "组2": "A组", "姓名": "刘智文", "账号": "nilliu", "职级": "L1", "直接上级": "saphielian(连世慧)", "调休工时(h)": 27.5}, {"组别": "质量管理2组", "组2": "A组", "姓名": "任丽娟", "账号": "cimiren", "职级": "L2", "直接上级": "gretahou(侯树娇)", "调休工时(h)": 26.0}, {"组别": "质量管理2组", "组2": "A组", "姓名": "刘晓义", "账号": "snowwliu", "职级": "L2", "直接上级": "gretahou(侯树娇)", "调休工时(h)": 24.5}, {"组别": "质量管理2组", "组2": "A组", "姓名": "张月玲", "账号": "guoguozhang", "职级": "1-1", "直接上级": "larschen(陈津)", "调休工时(h)": 23.5}, {"组别": "质量管理2组", "组2": "A组", "姓名": "张建伟", "账号": "jianwzhang", "职级": "L2", "直接上级": "gretahou(侯树娇)", "调休工时(h)": 23.5}, {"组别": "质量管理2组", "组2": "A组", "姓名": "郑军", "账号": "junzheng", "职级": "1-3", "直接上级": "bengbengzhu(朱迪)", "调休工时(h)": 23.5}, {"组别": "质量管理2组", "组2": "A组", "姓名": "王瑞蔓", "账号": "gertawang", "职级": "L2", "直接上级": "larschen(陈津)", "调休工时(h)": 22.5}, {"组别": "质量管理2组", "组2": "B组", "姓名": "范明发", "账号": "mingfafan", "职级": "L2", "直接上级": "basehuang(黄萌)", "调休工时(h)": 16.5}, {"组别": "质量管理2组", "组2": "A组", "姓名": "李展", "账号": "lucaszli", "职级": "L1", "直接上级": "saphielian(连世慧)", "调休工时(h)": 14.5}, {"组别": "质量管理2组", "组2": "A组", "姓名": "刘维", "账号": "berthaaaliu", "职级": "1-1", "直接上级": "gretahou(侯树娇)", "调休工时(h)": 13.0}, {"组别": "质量管理2组", "组2": "A组", "姓名": "邓永涛", "账号": "jickdeng", "职级": "1-1", "直接上级": "gretahou(侯树娇)", "调休工时(h)": 13.0}, {"组别": "质量管理2组", "组2": "A组", "姓名": "张絮", "账号": "petraxzhang", "职级": "1-2", "直接上级": "saphielian(连世慧)", "调休工时(h)": 11.5}, {"组别": "质量管理2组", "组2": "A组", "姓名": "陈津", "账号": "larschen", "职级": "L2", "直接上级": "nellzhao(赵靓)", "调休工时(h)": 11.0}, {"组别": "质量管理2组", "组2": "A组", "姓名": "赵鑫", "账号": "casonzhao", "职级": "1-1", "直接上级": "saphielian(连世慧)", "调休工时(h)": 9.0}, {"组别": "质量管理2组", "组2": "A组", "姓名": "邬晓玲", "账号": "moxiaoziwu", "职级": "L2", "直接上级": "larschen(陈津)", "调休工时(h)": 6.5}, {"组别": "质量管理2组", "组2": "B组", "姓名": "王梓暄", "账号": "frenkiwang", "职级": "1-2", "直接上级": "cottizhang(张敬春)", "调休工时(h)": 4.0}, {"组别": "质量管理2组", "组2": "A组", "姓名": "田先鹏", "账号": "marytian", "职级": "L2", "直接上级": "bengbengzhu(朱迪)", "调休工时(h)": 3.5}, {"组别": "质量管理2组", "组2": "A组", "姓名": "侯树娇", "账号": "gretahou", "职级": "1-2", "直接上级": "nellzhao(赵靓)", "调休工时(h)": 3.0}, {"组别": "质量管理2组", "组2": "B组", "姓名": "张敬春", "账号": "cottizhang", "职级": "L2", "直接上级": "basehuang(黄萌)", "调休工时(h)": 2.5}, {"组别": "质量管理2组", "组2": "A组", "姓名": "连世慧", "账号": "saphielian", "职级": "1-2", "直接上级": "nellzhao(赵靓)", "调休工时(h)": 2.5}, {"组别": "质量管理2组", "组2": "A组", "姓名": "朱迪", "账号": "bengbengzhu", "职级": "1-2", "直接上级": "nellzhao(赵靓)", "调休工时(h)": 1.0}, {"组别": "质量管理3组", "组2": "A组", "姓名": "王硕", "账号": "waranwang", "职级": "2-1", "直接上级": "peppersliu(刘娇)", "调休工时(h)": 45.5}, {"组别": "质量管理3组", "组2": "A组", "姓名": "吕雯", "账号": "billkinlv", "职级": "L2", "直接上级": "elvissyang(杨天冰)", "调休工时(h)": 34.0}, {"组别": "质量管理3组", "组2": "A组", "姓名": "刘娇", "账号": "peppersliu", "职级": "1-3", "直接上级": "elvissyang(杨天冰)", "调休工时(h)": 5.5}, {"组别": "质量管理3组-甲方", "组2": "B组", "姓名": "徐依娆", "账号": "lolaxu", "职级": "L2", "直接上级": "zaizaizhao(赵鹏)", "调休工时(h)": 8.0}, {"组别": "质量管理3组-甲方", "组2": "B组", "姓名": "张淳", "账号": "megannzhang", "职级": "L3", "直接上级": "zaizaizhao(赵鹏)", "调休工时(h)": 3.5}], "perf_dist": {"未评": 147}, "high_perf_rate": 0.0, "city_avg_cost": {"北京": 0.0, "天津": 0.0, "成都": 0.0, "武汉": 0.0, "澄迈县": 0.0, "邯郸": 0.0, "重庆": 0.0, "青岛": 0.0}, "level_avg_cost": {"1-1": 0.0, "1-2": 0.0, "1-3": 0.0, "2-1": 0.0, "2-2": 0.0, "2-3": 0.0, "3-1": 0.0, "L1": 0.0, "L2": 0.0, "L3": 0.0, "L4": 0.0}, "conclusions": ["📊 高绩效(A+/A)占比 0.0%", "⚠️ 风险提示：高绩效占比低于30%，需检视绩效评估标准是否合理，或整体产出是否存在系统性问题", "⚠️ 即将过期调休工时合计 856.5h，需尽快安排调休，避免员工权益损失"], "suggestions": ["【建议2】探索绩效工资与AI能力档位挂钩的激励机制，鼓励员工主动提升AI辅助效率", "【建议3】建立内部人才市场机制，鼓励内部转岗，降低招聘成本同时提升员工满意度"]}, "module5": {"scores": {"结构合理性": 3.5, "成本健康度": 4.0, "人才梯队": 4.5, "项目匹配度": 3.5, "风险水平": 3.8}, "overall_score": 3.9, "top_risks": ["⚠️ 风险提示：本月 1 名骨干（管理/关键岗位）离职：吕昕，需立即启动替代方案，评估岗位空缺影响", "⚠️ 风险提示：质量管理3组（联营78%） 联营占比超60%，稳定性风险较高，建议优先推进转自营或备岗", "⚠️ 高潜人才占比仅 0.0%，人才储备偏薄，建议加大人才盘点力度"], "top_opts": ["【建议1】定期复盘管理跨度，保持在10-15:1的健康范围内，避免因业务扩张导致管理失控", "【建议2】持续关注高潜人才保留，提前准备关键岗位备岗方案，降低突发离职影响", "【建议3】联营占比达49.3%，建议制定联营转自营计划，逐步将核心骨干纳入自营体系，提升组织稳定性"], "top3_actions": ["第一优先：完善AI能力档位基础数据填报，消除分析盲区，为能力结构优化提供数据基础（2周内完成）", "第二优先：针对管理跨度过大的组（如质量管理3组），增设管理层级，将跨度控制在15:1以内（1个月内落地）", "第三优先：建立关键岗位（高级组长/项目负责人）的继任者培养计划，降低单点依赖风险（3个月内建立机制）"], "monitor_kpis": ["📌 离职率（月度，预警线：>3%）", "📌 管理跨度（月度，预警线：>20:1）", "📌 项目整体达标率（月度，预警线：<85%）", "📌 AI能力档位填写率（月度，目标：100%）", "📌 高潜人才留存率（季度，预警线：<90%）", "📌 人均成本环比变化（月度，预警线：>±10%）", "📌 联营占比（月度，预警线：>50%）"], "industry_benchmark": {"管理跨度建议": "头部审核公司（如字节、快手质检团队）通常保持8-12:1管理跨度", "高潜比例": "行业标杆：高潜人才占比 15-20%，核心人才 40-50%", "AI工具渗透率": "2025年头部公司AI辅助质检渗透率已达60-80%，我团队AI能力档位建设亟需提速", "联营比例": "头部公司核心项目自营占比通常维持70%以上，以保障质量稳定性", "人均项目覆盖": "行业内人均承担项目体量通常在月均15-25人天/人，需结合项目难度综合评估", "离职率": "行业平均月度离职率约1.5-2.5%，超过3%需启动留才专项行动"}}};
+try{ render(__STATIC_DATA__); }
+catch(e){
+  console.error('render error:', e);
+  document.getElementById('mainContent').innerHTML = 
+    `<div class="chart-card"><div class="no-data">⚠️ 渲染失败：${e.message}</div></div>`;
+}
+// 滚动进度条
+window.addEventListener('scroll',()=>{
+  const d = document.documentElement;
+  const pct = d.scrollTop/(d.scrollHeight-d.clientHeight)*100;
+  document.getElementById('progressBar').style.width = pct+'%';
+});
+
+// 动画
+const style = document.createElement('style');
+style.textContent = `@keyframes slideIn{from{opacity:0;transform:translateX(-16px)}to{opacity:1;transform:translateX(0)}}`;
+document.head.appendChild(style);
+
+// 即将过期调休名单 - 切换表格/分组视图
+function toggleExpireView() {
+  var t = document.getElementById('expireTableDiv');
+  var b = document.getElementById('expireViewBtn');
+  var g = document.getElementById('expireGrpDiv');
+  if (!t || !b || !g) return;
+  if (t.style.display === 'none') {
+    t.style.display = '';
+    g.style.display = 'none';
+    b.textContent = '切换分组视图';
+  } else {
+    t.style.display = 'none';
+    g.style.display = '';
+    b.textContent = '切换表格视图';
+  }
+}
+</script>
+</body>
+</html>
