@@ -1065,7 +1065,7 @@ fetch('/api/analysis')
         `<div class="chart-card"><div class="no-data">⚠️ ${data.error}<br><br><span style="color:#546e7a">（静态版）</span></div></div>`;
       return;
     }
-    try{ render(data); }
+    try{ render(data); if(window._startDashboardAnimation) window._startDashboardAnimation(); }
     catch(e){
       console.error('render error:', e);
       document.getElementById('mainContent').innerHTML = 
@@ -1191,19 +1191,17 @@ function setupTableAnimation(){
 }
 
 // ══ 在 render 后 hook ════════════════════════════════════
-const _origFetchHandler = window.fetch;
-// 等待 DOM 渲染完成后执行动画初始化
-const _mutObs = new MutationObserver(()=>{
-  if(document.querySelectorAll('.kpi-val').length > 0){
-    _mutObs.disconnect();
-    setTimeout(()=>{
-      startKpiAnimation();
-      setupCardObserver();
-      setupTableAnimation();
-    }, 100);
-  }
-});
-_mutObs.observe(document.getElementById('mainContent')||document.body, {childList:true, subtree:true});
+// 注意：不使用 MutationObserver + requestAnimationFrame 触发动画
+// 原因：GitHub Pages 静态托管时，非激活标签页 rAF 被浏览器节流至 1fps
+// 导致 1200ms 动画只跑 2~5 帧就结束，KPI 数值停在极小值
+// 修复方案：render() 完成后直接 setTimeout 触发，确保动画完整执行
+window._startDashboardAnimation = function(){
+  setTimeout(()=>{
+    startKpiAnimation();
+    setupCardObserver();
+    setupTableAnimation();
+  }, 300);
+};
 </script>
 </body>
 </html>
